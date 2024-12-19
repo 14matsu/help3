@@ -6,8 +6,9 @@ import streamlit as st
 from constants import AREAS
 from dotenv import load_dotenv
 
-# .envファイルを読み込む
-load_dotenv()
+# ローカル環境の場合のみ.envファイルを読み込む
+if not os.environ.get('STREAMLIT_CLOUD'):
+    load_dotenv()
 
 class SupabaseDB:
     def __init__(self):
