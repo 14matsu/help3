@@ -1,0 +1,4 @@
+.env
+shifts.db
+__pycache__/
+*.pyc
