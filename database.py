@@ -4,6 +4,10 @@ import pandas as pd
 from supabase import create_client, Client
 import streamlit as st
 from constants import AREAS
+from dotenv import load_dotenv
+
+# .envファイルを読み込む
+load_dotenv()
 
 class SupabaseDB:
     def __init__(self):
@@ -12,15 +16,16 @@ class SupabaseDB:
             supabase_url = st.secrets["supabase_url"]
             supabase_key = st.secrets["supabase_key"]
         else:
-            # ローカル環境用の設定
-            supabase_url = os.environ.get("SUPABASE_URL")
-            supabase_key = os.environ.get("SUPABASE_KEY")
+            # ローカル環境用の設定（.envファイルから読み込み）
+            supabase_url = os.getenv("SUPABASE_URL")
+            supabase_key = os.getenv("SUPABASE_KEY")
+            
+            if not supabase_url or not supabase_key:
+                raise Exception("環境変数 SUPABASE_URL と SUPABASE_KEY が設定されていません")
         
         self.supabase: Client = create_client(supabase_url, supabase_key)
     
     def init_db(self):
-        # Supabaseではテーブルは管理画面で作成するため、
-        # この関数は主にテーブルの存在確認に使用
         try:
             # テーブルの存在確認
             self.supabase.table('shifts').select("*").limit(1).execute()
