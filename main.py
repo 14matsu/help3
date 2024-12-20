@@ -6,7 +6,22 @@ import base64
 import asyncio
 from database import db
 from pdf_generator import generate_help_table_pdf, generate_individual_pdf, generate_store_pdf
-from constants import STAFF_AREAS, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
+from constants import (
+    STAFF_AREAS,
+    SHIFT_TYPES,
+    STORE_COLORS,
+    WEEKDAY_JA,
+    AREAS,
+    SPECIAL_SHIFT_TYPES,
+    FILLED_HELP_BG_COLOR,
+    SATURDAY_BG_COLOR,
+    SUNDAY_BG_COLOR,
+    HOLIDAY_BG_COLOR,
+    KANOYA_BG_COLOR,
+    KAGOKITA_BG_COLOR,
+    RECRUIT_BG_COLOR,
+    DARK_GREY_TEXT_COLOR
+)
 from utils import parse_shift, format_shifts, update_session_state_shifts, highlight_weekend_and_holiday, highlight_filled_shifts
 
 # 全従業員リストを動的に生成
