@@ -13,9 +13,9 @@ if not os.environ.get('STREAMLIT_CLOUD'):
 class SupabaseDB:
     def __init__(self):
         # Streamlitのシークレットまたは環境変数からSupabaseの認証情報を取得
-        if os.environ.get('STREAMLIT_CLOUD'):
-            supabase_url = st.secrets["supabase_url"]
-            supabase_key = st.secrets["supabase_key"]
+        if st.secrets.get("env") == "prod":  # または明示的に環境を指定
+            supabase_url = st.secrets.get("supabase_url")
+            supabase_key = st.secrets.get("supabase_key")
         else:
             # ローカル環境用の設定（.envファイルから読み込み）
             supabase_url = os.getenv("SUPABASE_URL")
