@@ -75,7 +75,8 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
 
 def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
-    custom_page_size = (landscape(A4)[0] * 1.05, landscape(A4)[1] * 1.1)
+    # ページサイズを少し大きくする
+    custom_page_size = (landscape(A4)[0] * 1.2, landscape(A4)[1] * 1.1)
     doc = SimpleDocTemplate(buffer, pagesize=custom_page_size, rightMargin=5*mm, leftMargin=5*mm, topMargin=10*mm, bottomMargin=10*mm)
     elements = []
 
@@ -93,19 +94,19 @@ def generate_help_table_pdf(data, year, month, area=None):
     normal_style = ParagraphStyle('Normal', 
                                   parent=styles['Normal'], 
                                   fontName='NotoSansJP', 
-                                  fontSize=7,
+                                  fontSize=8,  # フォントサイズを少し大きく
                                   alignment=TA_CENTER, 
                                   textColor=colors.HexColor("#373737"))
 
     bold_style = ParagraphStyle('Bold', 
                                 parent=normal_style, 
                                 fontName='NotoSansJP-Bold', 
-                                fontSize=7,
+                                fontSize=8,  # フォントサイズを少し大きく
                                 textColor=colors.HexColor("#373737"))
 
     header_style = ParagraphStyle('Header', 
                                   parent=bold_style, 
-                                  fontSize=8,
+                                  fontSize=9,  # ヘッダーのフォントサイズを調整
                                   textColor=colors.white)
 
     start_date = pd.Timestamp(year, month, 16)
@@ -117,7 +118,7 @@ def generate_help_table_pdf(data, year, month, area=None):
         (next_month_start, end_date)
     ]
 
-    # エリアに基づいて従業員リストを絞り込む
+    # エリアに基づいて従業員リストを取得
     if area and area in EMPLOYEE_AREAS:
         employees = EMPLOYEE_AREAS[area]
         title_prefix = f"{area} "
@@ -148,8 +149,14 @@ def generate_help_table_pdf(data, year, month, area=None):
             employee_shifts = [format_shift_for_pdf(row[emp]) for emp in employees]
             table_data.append([Paragraph(f'<b>{date_str}</b>', bold_style), Paragraph(f'<b>{weekday}</b>', bold_style)] + employee_shifts)
 
-        # エリアに応じて列幅を調整
-        col_widths = [50, 40] + [120] * len(employees)  # エリアごとの従業員数に応じて幅を調整
+        # 列幅を調整（日付と曜日は固定幅、従業員列は均等に分配）
+        available_width = custom_page_size[0] - 10*mm  # マージンを考慮
+        date_width = 45*mm  # 日付列の幅
+        weekday_width = 25*mm  # 曜日列の幅
+        remaining_width = available_width - date_width - weekday_width - 10*mm  # 余白を考慮
+        employee_width = remaining_width / len(employees)  # 従業員列の幅を均等に分配
+        
+        col_widths = [date_width, weekday_width] + [employee_width] * len(employees)
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
         table_style = TableStyle([
@@ -158,16 +165,17 @@ def generate_help_table_pdf(data, year, month, area=None):
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, -1), 'NotoSansJP-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('FONTSIZE', (0, 1), (-1, -1), 6),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('LEFTPADDING', (0, 0), (-1, -1), 1),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 1),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            ('LEFTPADDING', (0, 0), (-1, -1), 2),  # パディングを少し増やす
+            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
             ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor("#373737")),
         ])
 
+        # 土日祝日の背景色
         for i, (date, row) in enumerate(filtered_data.iterrows(), start=1):
             if date.strftime('%a') == 'Sun' or jpholiday.is_holiday(date):
                 table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(HOLIDAY_BG_COLOR))
