@@ -6,7 +6,7 @@ import base64
 import asyncio
 from database import db
 from pdf_generator import generate_help_table_pdf, generate_individual_pdf, generate_store_pdf
-from constants import EMPLOYEES, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
+from constants import EMPLOYEES, EMPLOYEE_AREAS, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
 from utils import parse_shift, format_shifts, update_session_state_shifts, highlight_weekend_and_holiday, highlight_filled_shifts
 
 @st.cache_data(ttl=3600)
@@ -70,11 +70,12 @@ def display_shift_table(selected_year, selected_month):
     display_data['日付'] = display_data.index.strftime('%Y-%m-%d')
     display_data['曜日'] = display_data.index.strftime('%a').map(WEEKDAY_JA)
     
-    for employee in EMPLOYEES:
-        if employee not in display_data.columns:
-            display_data[employee] = '-'
+    # エリアごとに従業員列を整理
+    column_order = ['日付', '曜日']
+    for area in EMPLOYEE_AREAS:
+        column_order.extend(EMPLOYEE_AREAS[area])
     
-    display_data = display_data[['日付', '曜日'] + EMPLOYEES]
+    display_data = display_data[column_order]
     display_data = display_data.fillna('-')
 
     shift_counts = calculate_shift_count(display_data[EMPLOYEES])
@@ -122,6 +123,10 @@ def display_shift_table(selected_year, selected_month):
         font-weight: bold;
         background-color: #e6f3ff;
     }
+    .area-header {
+        background-color: #d4e6f1;
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -132,10 +137,14 @@ def display_shift_table(selected_year, selected_month):
     st.write(styled_df.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
 
     st.markdown("### シフト日数")
-    shift_count_df = pd.DataFrame([shift_counts], columns=EMPLOYEES)
-    styled_shift_count = shift_count_df.style.format("{:.1f}")\
-                                             .set_properties(**{'class': 'shift-count'})
-    st.write(styled_shift_count.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
+    # エリアごとにシフト日数を表示
+    for area, employees in EMPLOYEE_AREAS.items():
+        st.markdown(f"#### {area}")
+        area_shift_counts = shift_counts[employees]
+        shift_count_df = pd.DataFrame([area_shift_counts], columns=employees)
+        styled_shift_count = shift_count_df.style.format("{:.1f}")\
+                                               .set_properties(**{'class': 'shift-count'})
+        st.write(styled_shift_count.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
 
     if st.button("ヘルプ表をPDFでダウンロード"):
         pdf = generate_help_table_pdf(display_data, selected_year, selected_month)
@@ -258,19 +267,6 @@ def display_store_help_requests(selected_year, selected_month):
 
                 st.write(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-def load_shift_data(year, month):
-    start_date = pd.Timestamp(year, month, 16)
-    end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
-    shifts = db.get_shifts(start_date, end_date)
-    
-    date_range = pd.date_range(start=start_date, end=end_date)
-    full_shifts = pd.DataFrame(index=date_range, columns=EMPLOYEES, data='-')
-    full_shifts.update(shifts)
-    
-    st.session_state.shift_data = full_shifts
-    st.session_state.current_year = year
-    st.session_state.current_month = month
-
 async def main():
     st.set_page_config(layout="wide")
     st.title('ヘルプ管理アプリ📝')
@@ -281,13 +277,16 @@ async def main():
         selected_year = st.selectbox('年を選択', range(current_year, current_year + 10), key='year_selector')
         selected_month = st.selectbox('月を選択', range(1, 13), key='month_selector')
 
-        load_shift_data(selected_year, selected_month)
         initialize_shift_data(selected_year, selected_month)
         shifts = get_cached_shifts(selected_year, selected_month)
         update_session_state_shifts(shifts)
 
         st.header('シフト登録/修正')
-        employee = st.selectbox('従業員を選択', EMPLOYEES)
+        
+        # エリアごとに従業員を選択できるように変更
+        area = st.selectbox('エリアを選択', list(EMPLOYEE_AREAS.keys()), key='employee_area_selector')
+        employee = st.selectbox('従業員を選択', EMPLOYEE_AREAS[area])
+        
         start_date = datetime(selected_year, selected_month, 16)
         end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
         default_date = max(min(datetime.now().date(), end_date.date()), start_date.date())
@@ -334,7 +333,10 @@ async def main():
             st.experimental_rerun()
 
         st.header('個別PDFのダウンロード')
-        selected_employee = st.selectbox('従業員を選択', EMPLOYEES, key='pdf_employee_selector')
+        # エリアごとに従業員を選択できるように変更
+        pdf_area = st.selectbox('エリアを選択', list(EMPLOYEE_AREAS.keys()), key='pdf_employee_area_selector')
+        selected_employee = st.selectbox('従業員を選択', EMPLOYEE_AREAS[pdf_area], key='pdf_employee_selector')
+        
         if st.button('PDFを生成'):
             employee_data = st.session_state.shift_data[selected_employee]
             pdf_buffer = generate_individual_pdf(employee_data, selected_employee, selected_year, selected_month)
