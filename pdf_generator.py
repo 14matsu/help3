@@ -9,7 +9,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.colors import Color
-from constants import STORE_COLORS, WEEKDAY_JA, SATURDAY_BG_COLOR, SUNDAY_BG_COLOR, EMPLOYEES, HOLIDAY_BG_COLOR
+from constants import EMPLOYEE_AREAS,STORE_COLORS, WEEKDAY_JA, SATURDAY_BG_COLOR, SUNDAY_BG_COLOR, EMPLOYEES, HOLIDAY_BG_COLOR
 from io import BytesIO
 from utils import parse_shift  # parse_shift関数をutils.pyからインポート
 from datetime import datetime
@@ -73,7 +73,7 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
     return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', bold_style2) 
             for time, store in zip(times, stores) if time and store]
 
-def generate_help_table_pdf(data, year, month):
+def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
     custom_page_size = (landscape(A4)[0] * 1.05, landscape(A4)[1] * 1.1)
     doc = SimpleDocTemplate(buffer, pagesize=custom_page_size, rightMargin=5*mm, leftMargin=5*mm, topMargin=10*mm, bottomMargin=10*mm)
@@ -93,19 +93,19 @@ def generate_help_table_pdf(data, year, month):
     normal_style = ParagraphStyle('Normal', 
                                   parent=styles['Normal'], 
                                   fontName='NotoSansJP', 
-                                  fontSize=7,  # フォントサイズを小さくする
+                                  fontSize=7,
                                   alignment=TA_CENTER, 
                                   textColor=colors.HexColor("#373737"))
 
     bold_style = ParagraphStyle('Bold', 
                                 parent=normal_style, 
                                 fontName='NotoSansJP-Bold', 
-                                fontSize=7,  # フォントサイズを小さくする
+                                fontSize=7,
                                 textColor=colors.HexColor("#373737"))
 
     header_style = ParagraphStyle('Header', 
                                   parent=bold_style, 
-                                  fontSize=8,  # ヘッダーのフォントサイズも少し小さくする
+                                  fontSize=8,
                                   textColor=colors.white)
 
     start_date = pd.Timestamp(year, month, 16)
@@ -117,11 +117,19 @@ def generate_help_table_pdf(data, year, month):
         (next_month_start, end_date)
     ]
 
+    # エリアに基づいて従業員リストを絞り込む
+    if area and area in EMPLOYEE_AREAS:
+        employees = EMPLOYEE_AREAS[area]
+        title_prefix = f"{area} "
+    else:
+        employees = EMPLOYEES
+        title_prefix = ""
+
     for i, (range_start, range_end) in enumerate(date_ranges):
         if i > 0:
             elements.append(PageBreak())
 
-        title = Paragraph(f"{range_start.strftime('%Y年%m月%d日')}～{range_end.strftime('%Y年%m月%d日')} ヘルプ表", title_style)
+        title = Paragraph(f"{title_prefix}{range_start.strftime('%Y年%m月%d日')}～{range_end.strftime('%Y年%m月%d日')} ヘルプ表", title_style)
         elements.append(title)
         elements.append(Spacer(1, 5*mm))
 
@@ -131,16 +139,17 @@ def generate_help_table_pdf(data, year, month):
             [
                 Paragraph(f'<font color="white"><b>日付</b></font>', header_style),
                 Paragraph(f'<font color="white"><b>曜日</b></font>', header_style)
-            ] + [Paragraph(f'<font color="white"><b>{emp}</b></font>', header_style) for emp in EMPLOYEES]
+            ] + [Paragraph(f'<font color="white"><b>{emp}</b></font>', header_style) for emp in employees]
         ]
 
         for date, row in filtered_data.iterrows():
             weekday = WEEKDAY_JA.get(date.strftime('%a'), date.strftime('%a'))
             date_str = date.strftime('%Y-%m-%d')
-            employee_shifts = [format_shift_for_pdf(row[emp]) for emp in EMPLOYEES]
+            employee_shifts = [format_shift_for_pdf(row[emp]) for emp in employees]
             table_data.append([Paragraph(f'<b>{date_str}</b>', bold_style), Paragraph(f'<b>{weekday}</b>', bold_style)] + employee_shifts)
 
-        col_widths = [50, 40] + [78] * len(EMPLOYEES)  # 各列の幅を調整
+        # エリアに応じて列幅を調整
+        col_widths = [50, 40] + [120] * len(employees)  # エリアごとの従業員数に応じて幅を調整
         table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
         table_style = TableStyle([
@@ -149,12 +158,12 @@ def generate_help_table_pdf(data, year, month):
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (-1, -1), 'NotoSansJP-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),  # ヘッダー行のフォントサイズを小さくする
-            ('FONTSIZE', (0, 1), (-1, -1), 6),  # 内容のフォントサイズを小さくする
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 6),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('LEFTPADDING', (0, 0), (-1, -1), 1),
             ('RIGHTPADDING', (0, 0), (-1, -1), 1),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),  # 上下のパディングを減らす
+            ('TOPPADDING', (0, 0), (-1, -1), 1),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
             ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor("#373737")),
         ])

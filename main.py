@@ -66,44 +66,10 @@ def display_shift_table(selected_year, selected_month):
             display_data.loc[date] = '-'
     
     display_data = display_data.sort_index()
-    
     display_data['日付'] = display_data.index.strftime('%Y-%m-%d')
     display_data['曜日'] = display_data.index.strftime('%a').map(WEEKDAY_JA)
     
-    # エリアごとに従業員列を整理
-    column_order = ['日付', '曜日']
-    for area in EMPLOYEE_AREAS:
-        column_order.extend(EMPLOYEE_AREAS[area])
-    
-    display_data = display_data[column_order]
-    display_data = display_data.fillna('-')
-
-    shift_counts = calculate_shift_count(display_data[EMPLOYEES])
-
-    items_per_page = 15
-    total_pages = len(display_data) // items_per_page + (1 if len(display_data) % items_per_page > 0 else 0)
-    
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 1
-
-    col1, col2, col3 = st.columns([2,3,2])
-    with col1:
-        if st.button('◀◀ 最初', key='first_page'):
-            st.session_state.current_page = 1
-        if st.button('◀ 前へ', key='prev_page') and st.session_state.current_page > 1:
-            st.session_state.current_page -= 1
-    with col2:
-        st.write(f'ページ {st.session_state.current_page} / {total_pages}')
-    with col3:
-        if st.button('最後 ▶▶', key='last_page'):
-            st.session_state.current_page = total_pages
-        if st.button('次へ ▶', key='next_page') and st.session_state.current_page < total_pages:
-            st.session_state.current_page += 1
-
-    start_idx = (st.session_state.current_page - 1) * items_per_page
-    end_idx = start_idx + items_per_page
-    page_display_data = display_data.iloc[start_idx:end_idx]
-
+    # スタイルの設定
     st.markdown("""
     <style>
     table {
@@ -123,37 +89,67 @@ def display_shift_table(selected_year, selected_month):
         font-weight: bold;
         background-color: #e6f3ff;
     }
-    .area-header {
-        background-color: #d4e6f1;
-        font-weight: bold;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-    page_display_data = page_display_data.reset_index(drop=True)
-    styled_df = page_display_data.style.format(format_shifts, subset=EMPLOYEES)\
-                                .apply(highlight_weekend_and_holiday, axis=1)
+    # エリアタブの作成
+    tabs = st.tabs(list(EMPLOYEE_AREAS.keys()))
     
-    st.write(styled_df.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
+    for area, tab in zip(EMPLOYEE_AREAS.keys(), tabs):
+        with tab:
+            area_employees = EMPLOYEE_AREAS[area]
+            area_display_data = display_data[['日付', '曜日'] + area_employees]
+            
+            items_per_page = 15
+            total_pages = len(area_display_data) // items_per_page + (1 if len(area_display_data) % items_per_page > 0 else 0)
+            
+            if f'current_page_{area}' not in st.session_state:
+                st.session_state[f'current_page_{area}'] = 1
 
-    st.markdown("### シフト日数")
-    # エリアごとにシフト日数を表示
-    for area, employees in EMPLOYEE_AREAS.items():
-        st.markdown(f"#### {area}")
-        area_shift_counts = shift_counts[employees]
-        shift_count_df = pd.DataFrame([area_shift_counts], columns=employees)
-        styled_shift_count = shift_count_df.style.format("{:.1f}")\
-                                               .set_properties(**{'class': 'shift-count'})
-        st.write(styled_shift_count.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
+            # ページネーション用のコントロール
+            col1, col2, col3 = st.columns([2,3,2])
+            with col1:
+                if st.button('◀◀ 最初', key=f'first_page_{area}'):
+                    st.session_state[f'current_page_{area}'] = 1
+                if st.button('◀ 前へ', key=f'prev_page_{area}') and st.session_state[f'current_page_{area}'] > 1:
+                    st.session_state[f'current_page_{area}'] -= 1
+            with col2:
+                st.write(f'ページ {st.session_state[f"current_page_{area}"]} / {total_pages}')
+            with col3:
+                if st.button('最後 ▶▶', key=f'last_page_{area}'):
+                    st.session_state[f'current_page_{area}'] = total_pages
+                if st.button('次へ ▶', key=f'next_page_{area}') and st.session_state[f'current_page_{area}'] < total_pages:
+                    st.session_state[f'current_page_{area}'] += 1
 
-    if st.button("ヘルプ表をPDFでダウンロード"):
-        pdf = generate_help_table_pdf(display_data, selected_year, selected_month)
-        st.download_button(
-            label="ヘルプ表PDFをダウンロード",
-            data=pdf,
-            file_name=f"全ヘルプスタッフ_{selected_year}_{selected_month}.pdf",
-            mime="application/pdf"
-        )
+            start_idx = (st.session_state[f'current_page_{area}'] - 1) * items_per_page
+            end_idx = start_idx + items_per_page
+            page_display_data = area_display_data.iloc[start_idx:end_idx]
+            
+            # テーブルの表示
+            page_display_data = page_display_data.reset_index(drop=True)
+            styled_df = page_display_data.style.format(format_shifts, subset=area_employees)\
+                                            .apply(highlight_weekend_and_holiday, axis=1)
+            
+            st.write(styled_df.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
+
+            # シフト日数の表示
+            st.markdown(f"### {area}のシフト日数")
+            area_shift_counts = calculate_shift_count(area_display_data[area_employees])
+            shift_count_df = pd.DataFrame([area_shift_counts], columns=area_employees)
+            styled_shift_count = shift_count_df.style.format("{:.1f}")\
+                                                   .set_properties(**{'class': 'shift-count'})
+            st.write(styled_shift_count.hide(axis="index").to_html(escape=False), unsafe_allow_html=True)
+
+            # エリアごとのPDFダウンロードボタン
+            if st.button(f"{area}のヘルプ表をPDFでダウンロード", key=f'pdf_download_{area}'):
+                pdf = generate_help_table_pdf(area_display_data, selected_year, selected_month, area)
+                st.download_button(
+                    label=f"{area}のヘルプ表PDFをダウンロード",
+                    data=pdf,
+                    file_name=f"{area}_{selected_year}_{selected_month}.pdf",
+                    mime="application/pdf",
+                    key=f'pdf_download_button_{area}'
+                )
 
 def initialize_session_state():
     if 'editing_shift' not in st.session_state:
