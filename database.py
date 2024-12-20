@@ -12,21 +12,38 @@ if not os.environ.get('STREAMLIT_CLOUD'):
 
 class SupabaseDB:
     def __init__(self):
-
-
-        # Streamlitのシークレットまたは環境変数からSupabaseの認証情報を取得
-        if os.environ.get('STREAMLIT_CLOUD'):
-            supabase_url = st.secrets.database.get["supabase_url"]
-            supabase_key = st.secrets.database.get["supabase_key"]
-        else:
-            # ローカル環境用の設定（.envファイルから読み込み）
-            supabase_url = os.getenv("SUPABASE_URL")
-            supabase_key = os.getenv("SUPABASE_KEY")
+        try:
+            # デバッグ用出力
+            st.write("Environment Check:", {
+                "is_streamlit_cloud": st.secrets.get("env") == "prod",
+                "available_secrets": list(st.secrets.keys())
+            })
             
+            # まずStreamlit Secretsから直接取得を試みる
+            if "database" in st.secrets:
+                supabase_url = st.secrets["database"]["supabase_url"]
+                supabase_key = st.secrets["database"]["supabase_key"]
+                st.write("Using Streamlit Secrets")
+            else:
+                # ローカル環境の.envファイルから読み込み
+                load_dotenv()  # 念のため再度読み込み
+                supabase_url = os.getenv("SUPABASE_URL")
+                supabase_key = os.getenv("SUPABASE_KEY")
+                st.write("Using .env file")
+
             if not supabase_url or not supabase_key:
-                raise Exception("環境変数 SUPABASE_URL と SUPABASE_KEY が設定されていません")
-        
-        self.supabase: Client = create_client(supabase_url, supabase_key)
+                st.error("データベース接続情報が見つかりません")
+                st.write("Current values:", {
+                    "url_exists": bool(supabase_url),
+                    "key_exists": bool(supabase_key)
+                })
+                raise Exception("Supabase の認証情報が設定されていません")
+                
+            self.supabase: Client = create_client(supabase_url, supabase_key)
+            
+        except Exception as e:
+            st.error(f"データベース接続エラー: {str(e)}")
+            raise
     
     def init_db(self):
         try:
