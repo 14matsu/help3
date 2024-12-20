@@ -12,6 +12,20 @@ if not os.environ.get('STREAMLIT_CLOUD'):
 
 class SupabaseDB:
     def __init__(self):
+            # デバッグ用の出力
+        st.write("Available secrets:", st.secrets.keys())
+        
+        try:
+            supabase_url = st.secrets.get("supabase_url")
+            supabase_key = st.secrets.get("supabase_key")
+            
+            # デバッグ用の出力（実際の運用時は削除してください）
+            st.write("URL found:", bool(supabase_url))
+            st.write("Key found:", bool(supabase_key))
+        except Exception as e:
+            st.error(f"データベース接続エラー: {str(e)}")
+            raise
+
         # Streamlitのシークレットまたは環境変数からSupabaseの認証情報を取得
         if os.environ.get('STREAMLIT_CLOUD'):
             supabase_url = st.secrets["database"]["supabase_url"]
