@@ -12,33 +12,38 @@ if not os.environ.get('STREAMLIT_CLOUD'):
 
 class SupabaseDB:
     def __init__(self):
-            # デバッグ用の出力
-        st.write("Available secrets:", st.secrets.keys())
-        
         try:
-            supabase_url = st.secrets.get("supabase_url")
-            supabase_key = st.secrets.get("supabase_key")
+            # デバッグ用出力
+            st.write("Environment Check:", {
+                "is_streamlit_cloud": st.secrets.get("env") == "prod",
+                "available_secrets": list(st.secrets.keys())
+            })
             
-            # デバッグ用の出力（実際の運用時は削除してください）
-            st.write("URL found:", bool(supabase_url))
-            st.write("Key found:", bool(supabase_key))
+            # まずStreamlit Secretsから直接取得を試みる
+            if "database" in st.secrets:
+                supabase_url = st.secrets["database"]["supabase_url"]
+                supabase_key = st.secrets["database"]["supabase_key"]
+                st.write("Using Streamlit Secrets")
+            else:
+                # ローカル環境の.envファイルから読み込み
+                load_dotenv()  # 念のため再度読み込み
+                supabase_url = os.getenv("SUPABASE_URL")
+                supabase_key = os.getenv("SUPABASE_KEY")
+                st.write("Using .env file")
+
+            if not supabase_url or not supabase_key:
+                st.error("データベース接続情報が見つかりません")
+                st.write("Current values:", {
+                    "url_exists": bool(supabase_url),
+                    "key_exists": bool(supabase_key)
+                })
+                raise Exception("Supabase の認証情報が設定されていません")
+                
+            self.supabase: Client = create_client(supabase_url, supabase_key)
+        
         except Exception as e:
             st.error(f"データベース接続エラー: {str(e)}")
             raise
-
-        # Streamlitのシークレットまたは環境変数からSupabaseの認証情報を取得
-        if os.environ.get('STREAMLIT_CLOUD'):
-            supabase_url = st.secrets.database.get["supabase_url"]
-            supabase_key = st.secrets.database.get["supabase_key"]
-        else:
-            # ローカル環境用の設定（.envファイルから読み込み）
-            supabase_url = os.getenv("SUPABASE_URL")
-            supabase_key = os.getenv("SUPABASE_KEY")
-            
-            if not supabase_url or not supabase_key:
-                raise Exception("環境変数 SUPABASE_URL と SUPABASE_KEY が設定されていません")
-        
-        self.supabase: Client = create_client(supabase_url, supabase_key)
     
     def init_db(self):
         try:
