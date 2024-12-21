@@ -53,7 +53,7 @@ def calculate_shift_count(shift_data):
     return shift_data.applymap(count_shift).sum()
 
 def display_shift_table(selected_year, selected_month):
-    st.header('ヘルプ表')
+    #st.header('ヘルプ表')
     
     start_date = pd.Timestamp(selected_year, selected_month, 16)
     end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
