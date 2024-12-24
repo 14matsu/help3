@@ -41,28 +41,27 @@ def format_shifts(val):
         shift_type = parts[0]
         formatted_shifts = []
         
-        # シフトに@かご北が含まれているかチェック
-        has_kagokita = any('@かご北' in part for part in parts[1:])
-        
         for part in parts[1:]:
             if '@' in part:
                 time, store = part.strip().split('@')
                 color = STORE_COLORS.get(store, "#000000")
-                formatted_shifts.append(f'<span style="color: {color}">{time}@{store}</span>')
+                # かご北の場合は背景色も設定
+                if store == 'かご北':
+                    formatted_shifts.append(
+                        f'<span style="color: {color}; background-color: {KAGOKITA_BG_COLOR}">{time}@{store}</span>'
+                    )
+                else:
+                    formatted_shifts.append(f'<span style="color: {color}">{time}@{store}</span>')
             else:
                 formatted_shifts.append(part.strip())
         
         if shift_type in ['AM可', 'PM可', '1日可']:
             if formatted_shifts:
-                # @かご北が含まれる場合は背景色を適用
-                bg_color = f'background-color: {KAGOKITA_BG_COLOR};' if has_kagokita else ''
-                return f'<div style="white-space: pre-line; {bg_color}">{shift_type}\n{chr(10).join(formatted_shifts)}</div>'
+                return f'<div style="white-space: pre-line">{shift_type}\n{chr(10).join(formatted_shifts)}</div>'
             else:
                 return shift_type
         else:
-            # @かご北が含まれる場合は背景色を適用
-            bg_color = f'background-color: {KAGOKITA_BG_COLOR};' if has_kagokita else ''
-            return f'<div style="white-space: pre-line; {bg_color}">{chr(10).join(formatted_shifts)}</div>' if formatted_shifts else '-'
+            return f'<div style="white-space: pre-line">{chr(10).join(formatted_shifts)}</div>' if formatted_shifts else '-'
     except Exception as e:
         print(f"Error formatting shift: {val}. Error: {e}")
         return str(val)
