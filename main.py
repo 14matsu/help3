@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(layout="wide")
+
 import pandas as pd
 from datetime import datetime
 import io
@@ -9,7 +11,7 @@ from pdf_generator import generate_help_table_pdf, generate_individual_pdf, gene
 from constants import EMPLOYEES, EMPLOYEE_AREAS, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
 from utils import parse_shift, format_shifts, update_session_state_shifts, highlight_weekend_and_holiday, highlight_filled_shifts
 
-st.set_page_config(layout="wide")
+
 
 @st.cache_data(ttl=3600)
 def get_cached_shifts(year, month):
