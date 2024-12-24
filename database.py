@@ -23,7 +23,7 @@ class SupabaseDB:
             if "database" in st.secrets:
                 supabase_url = st.secrets["database"]["supabase_url"]
                 supabase_key = st.secrets["database"]["supabase_key"]
-                st.write("Using Streamlit Secrets")
+                #st.write("Using Streamlit Secrets")
             else:
                 # ローカル環境の.envファイルから読み込み
                 load_dotenv()  # 念のため再度読み込み
