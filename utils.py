@@ -44,13 +44,12 @@ def format_shifts(val):
         for part in parts[1:]:
             if '@' in part:
                 time, store = part.strip().split('@')
-                color = STORE_COLORS.get(store, "#000000")
-                # かご北の場合は背景色も設定
                 if store == 'かご北':
-                    formatted_shifts.append(
-                        f'<span style="color: {color}; background-color: {KAGOKITA_BG_COLOR}">{time}@{store}</span>'
-                    )
+                    # かご北の場合は背景色を適用
+                    formatted_shifts.append(f'<span style="background-color: {KAGOKITA_BG_COLOR}">{time}@{store}</span>')
                 else:
+                    # その他の店舗は通常の色のみ
+                    color = STORE_COLORS.get(store, "#000000")
                     formatted_shifts.append(f'<span style="color: {color}">{time}@{store}</span>')
             else:
                 formatted_shifts.append(part.strip())
