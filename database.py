@@ -14,10 +14,10 @@ class SupabaseDB:
     def __init__(self):
         try:
             # デバッグ用出力
-            st.write("Environment Check:", {
-                "is_streamlit_cloud": st.secrets.get("env") == "prod",
-                "available_secrets": list(st.secrets.keys())
-            })
+#            st.write("Environment Check:", {
+#                "is_streamlit_cloud": st.secrets.get("env") == "prod",
+#                "available_secrets": list(st.secrets.keys())
+#            })
             
             # まずStreamlit Secretsから直接取得を試みる
             if "database" in st.secrets:
