@@ -1,6 +1,12 @@
 import streamlit as st
 st.set_page_config(layout="wide")
 
+@st.cache_data(ttl=3600)
+def get_cached_shifts(year, month):
+    start_date = pd.Timestamp(year, month, 16)
+    end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
+    return db.get_shifts(start_date, end_date)
+
 import pandas as pd
 from datetime import datetime
 import io
@@ -13,11 +19,7 @@ from utils import parse_shift, format_shifts, update_session_state_shifts, highl
 
 
 
-@st.cache_data(ttl=3600)
-def get_cached_shifts(year, month):
-    start_date = pd.Timestamp(year, month, 16)
-    end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
-    return db.get_shifts(start_date, end_date)
+
 
 async def save_shift_async(date, employee, shift_str):
     await asyncio.to_thread(db.save_shift, date, employee, shift_str)
