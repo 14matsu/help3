@@ -33,13 +33,16 @@ def format_shifts(val):
         return f'<div style="background-color: {KANOYA_BG_COLOR};">{val}</div>'
     if val == 'かご北':
         return f'<div style="background-color: {KAGOKITA_BG_COLOR};">{val}</div>'
-    
     if val == 'リクルート':
         return f'<div style="background-color: {RECRUIT_BG_COLOR};">{val}</div>'
+    
     try:
         parts = str(val).split(',')
         shift_type = parts[0]
         formatted_shifts = []
+        
+        # シフトに@かご北が含まれているかチェック
+        has_kagokita = any('@かご北' in part for part in parts[1:])
         
         for part in parts[1:]:
             if '@' in part:
@@ -51,11 +54,15 @@ def format_shifts(val):
         
         if shift_type in ['AM可', 'PM可', '1日可']:
             if formatted_shifts:
-                return f'<div style="white-space: pre-line;">{shift_type}\n{chr(10).join(formatted_shifts)}</div>'
+                # @かご北が含まれる場合は背景色を適用
+                bg_color = f'background-color: {KAGOKITA_BG_COLOR};' if has_kagokita else ''
+                return f'<div style="white-space: pre-line; {bg_color}">{shift_type}\n{chr(10).join(formatted_shifts)}</div>'
             else:
                 return shift_type
         else:
-            return f'<div style="white-space: pre-line;">{chr(10).join(formatted_shifts)}</div>' if formatted_shifts else '-'
+            # @かご北が含まれる場合は背景色を適用
+            bg_color = f'background-color: {KAGOKITA_BG_COLOR};' if has_kagokita else ''
+            return f'<div style="white-space: pre-line; {bg_color}">{chr(10).join(formatted_shifts)}</div>' if formatted_shifts else '-'
     except Exception as e:
         print(f"Error formatting shift: {val}. Error: {e}")
         return str(val)
@@ -111,17 +118,6 @@ def highlight_filled_shifts(row, shift_data):
     for i, store in enumerate(all_stores):
         if store in row.index:
             store_shifts = shift_data.loc[date]
-            if store == 'かご北':
-                # かご北店舗の場合の処理
-                is_kagokita_shift = any(
-                    (shift == 'かご北' or  # シフトタイプが'かご北'
-                     (isinstance(shift, str) and '@かご北' in shift))  # シフト内に'@かご北'が含まれる
-                    for shift in store_shifts if pd.notna(shift)
-                )
-                if is_kagokita_shift:
-                    styles[row.index.get_loc(store)] = f'background-color: {KAGOKITA_BG_COLOR}'
-            else:
-                # その他の店舗の場合の処理
-                if any(is_shift_filled(shift)[0] and store in is_shift_filled(shift)[1] for shift in store_shifts if pd.notna(shift)):
-                    styles[row.index.get_loc(store)] = FILLED_HELP_BG_COLOR
+            if any(is_shift_filled(shift)[0] and store in is_shift_filled(shift)[1] for shift in store_shifts if pd.notna(shift)):
+                styles[row.index.get_loc(store)] = FILLED_HELP_BG_COLOR
     return styles
