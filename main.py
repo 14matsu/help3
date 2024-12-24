@@ -9,6 +9,8 @@ from pdf_generator import generate_help_table_pdf, generate_individual_pdf, gene
 from constants import EMPLOYEES, EMPLOYEE_AREAS, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
 from utils import parse_shift, format_shifts, update_session_state_shifts, highlight_weekend_and_holiday, highlight_filled_shifts
 
+st.set_page_config(layout="wide")
+
 @st.cache_data(ttl=3600)
 def get_cached_shifts(year, month):
     start_date = pd.Timestamp(year, month, 16)
@@ -263,7 +265,7 @@ def display_store_help_requests(selected_year, selected_month):
 
                 st.write(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-st.set_page_config(layout="wide")
+
 
 async def main():
     
