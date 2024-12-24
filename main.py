@@ -263,8 +263,10 @@ def display_store_help_requests(selected_year, selected_month):
 
                 st.write(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
+st.set_page_config(layout="wide")
+
 async def main():
-    st.set_page_config(layout="wide")
+    
     st.title('ヘルプ管理アプリ📝')
 
     with st.sidebar:
