@@ -110,12 +110,18 @@ def highlight_filled_shifts(row, shift_data):
     all_stores = [store for stores in AREAS.values() for store in stores]
     for i, store in enumerate(all_stores):
         if store in row.index:
-            # かご北店舗の場合、専用の背景色を適用
+            store_shifts = shift_data.loc[date]
             if store == 'かご北':
-                styles[row.index.get_loc(store)] = f'background-color: {KAGOKITA_BG_COLOR}'
+                # かご北店舗の場合の処理
+                is_kagokita_shift = any(
+                    (shift == 'かご北' or  # シフトタイプが'かご北'
+                     (isinstance(shift, str) and '@かご北' in shift))  # シフト内に'@かご北'が含まれる
+                    for shift in store_shifts if pd.notna(shift)
+                )
+                if is_kagokita_shift:
+                    styles[row.index.get_loc(store)] = f'background-color: {KAGOKITA_BG_COLOR}'
             else:
-                # 既存のシフト埋まり判定ロジック
-                store_shifts = shift_data.loc[date]
+                # その他の店舗の場合の処理
                 if any(is_shift_filled(shift)[0] and store in is_shift_filled(shift)[1] for shift in store_shifts if pd.notna(shift)):
                     styles[row.index.get_loc(store)] = FILLED_HELP_BG_COLOR
     return styles
