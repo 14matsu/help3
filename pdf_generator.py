@@ -354,9 +354,9 @@ def generate_store_pdf(store_data, store_name, year, month):
     elements.append(Spacer(1, 12))
 
     # 注意書き
-    note = Paragraph("*大田さんは1人のときは18時まで\nそれ以外は17時まで", normal_style)
-    elements.append(note)
-    elements.append(Spacer(1, 12))
+    #note = Paragraph("*大田さんは1人のときは18時まで\nそれ以外は17時まで", normal_style)
+    #elements.append(note)
+    #elements.append(Spacer(1, 12))
 
     # テーブルデータの準備
     header = ['日にち', '時間', 'ヘルプ担当', '備考']
