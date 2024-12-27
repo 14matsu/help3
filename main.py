@@ -17,13 +17,12 @@ from pdf_generator import generate_help_table_pdf, generate_individual_pdf, gene
 from constants import EMPLOYEES, EMPLOYEE_AREAS, SHIFT_TYPES, STORE_COLORS, WEEKDAY_JA, AREAS
 from utils import parse_shift, format_shifts, update_session_state_shifts, highlight_weekend_and_holiday, highlight_filled_shifts
 
-async def save_shift_async(date, employee, shift_str, repeat_weekly=False):
+async def save_shift_async(date, employee, shift_str, repeat_weekly=False, selected_dates=None):
     if not repeat_weekly:
         await asyncio.to_thread(db.save_shift, date, employee, shift_str)
     else:
-        # 4週間分の日付を生成して保存
-        dates = [date + pd.Timedelta(weeks=i) for i in range(5)]
-        for target_date in dates:
+        # 選択された日付のみ保存
+        for target_date in selected_dates:
             await asyncio.to_thread(db.save_shift, target_date, employee, shift_str)
     
     current_month = date.replace(day=1)
@@ -166,6 +165,8 @@ def initialize_session_state():
         st.session_state.editing_shift = False
     if 'current_shift' not in st.session_state:
         st.session_state.current_shift = None
+    if 'selected_dates' not in st.session_state:
+        st.session_state.selected_dates = {}
 
 def update_shift_input(current_shift, employee, date):
     initialize_session_state()
@@ -176,19 +177,47 @@ def update_shift_input(current_shift, employee, date):
     
     shift_type, times, stores = parse_shift(st.session_state.current_shift)
     
-    # シフト入力UI
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        new_shift_type = st.selectbox('種類', ['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'], 
-                                     index=['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'].index(shift_type) 
-                                     if shift_type in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート'] else 3)
-    with col2:
-        repeat_weekly = st.checkbox('繰り返し登録をする', help='5週間分同じシフトを登録します')
-        if repeat_weekly:
-            dates = [date + pd.Timedelta(weeks=i) for i in range(5)]
-            st.write('登録される日付:')
-            for d in dates:
-                st.write(f'- {d.strftime("%Y/%m/%d")}')
+    # 繰り返し登録チェックボックス
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='5週間分同じシフトを登録します')
+    
+    # 選択可能な日付のリストを作成
+    selected_dates = []
+    if repeat_weekly:
+        dates = [date + pd.Timedelta(weeks=i) for i in range(5)]
+        st.write('登録する日付を選択:')
+        
+        # セッション状態の初期化
+        if 'selected_dates' not in st.session_state:
+            st.session_state.selected_dates = {d.strftime("%Y/%m/%d"): True for d in dates}
+        
+        # 全選択/全解除ボタン
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button('全て選択'):
+                for d in dates:
+                    st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = True
+                st.experimental_rerun()
+        with col2:
+            if st.button('全て解除'):
+                for d in dates:
+                    st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = False
+                st.experimental_rerun()
+        
+        # 日付選択用のチェックボックスを表示
+        for d in dates:
+            date_str = d.strftime("%Y/%m/%d")
+            st.session_state.selected_dates[date_str] = st.checkbox(
+                f'{date_str} ({WEEKDAY_JA[d.strftime("%a")]})', 
+                value=st.session_state.selected_dates.get(date_str, True),
+                key=f'date_checkbox_{date_str}'
+            )
+            if st.session_state.selected_dates[date_str]:
+                selected_dates.append(d)
+
+    # シフト種類選択
+    new_shift_type = st.selectbox('種類', ['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'], 
+                                 index=['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'].index(shift_type) 
+                                 if shift_type in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート'] else 3)
     
     if new_shift_type in ['AM可', 'PM可', '1日可']:
         num_shifts = st.number_input('シフト数', min_value=1, max_value=5, value=len(times) or 1)
@@ -222,7 +251,7 @@ def update_shift_input(current_shift, employee, date):
         new_shift_str = new_shift_type
     
     st.session_state.current_shift = new_shift_str
-    return new_shift_str, repeat_weekly
+    return new_shift_str, repeat_weekly, selected_dates
 
 def display_store_help_requests(selected_year, selected_month):
     st.header('店舗ヘルプ希望')
@@ -274,7 +303,7 @@ def display_store_help_requests(selected_year, selected_month):
 
                 shift_data = st.session_state.shift_data[
                     (st.session_state.shift_data.index >= start_date) & 
-                    (st.session.shift_data.index <= end_date)
+                    (st.session_state.shift_data.index <= end_date)
                 ]
                 shift_data.index = pd.to_datetime(shift_data.index)
 
@@ -326,14 +355,13 @@ async def main():
         st.session_state.last_employee = employee
         st.session_state.last_date = date
         
-        new_shift_str, repeat_weekly = update_shift_input(current_shift, employee, date)
+        new_shift_str, repeat_weekly, selected_dates = update_shift_input(current_shift, employee, date)
 
         if st.button('保存'):
-            await save_shift_async(date, employee, new_shift_str, repeat_weekly)
+            await save_shift_async(date, employee, new_shift_str, repeat_weekly, selected_dates)
             st.session_state.shift_data.loc[date, employee] = new_shift_str
-            if repeat_weekly:
-                for i in range(1, 5):
-                    next_date = date + pd.Timedelta(weeks=i)
+            if repeat_weekly and selected_dates:
+                for next_date in selected_dates:
                     if next_date in st.session_state.shift_data.index:
                         st.session_state.shift_data.loc[next_date, employee] = new_shift_str
             st.session_state.editing_shift = False
