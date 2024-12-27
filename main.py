@@ -184,15 +184,22 @@ def update_shift_input(current_shift, employee, date):
     selected_dates = []
     if repeat_weekly:
         # 当月16日と翌月15日を取得
-        current_month = date.replace(day=16)
-        next_month = (current_month + pd.DateOffset(months=1)).replace(day=15)
+        current_month_start = pd.Timestamp(date.year, date.month, 16)
+        next_month_end = (current_month_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
         
         # 選択された日付から1週間ごとの日付を生成し、範囲内のもののみを保持
         dates = []
-        for i in range(5):  # 最大5週間分をチェック
-            next_date = date + pd.Timedelta(weeks=i)
-            if current_month <= next_date <= next_month:
-                dates.append(next_date)
+        current_date = date
+        
+        while current_date <= next_month_end:
+            # 現在の日付が当月16日以降かつ翌月15日以前の場合のみ追加
+            if current_month_start <= current_date <= next_month_end:
+                dates.append(current_date)
+            current_date += pd.Timedelta(weeks=1)
+            
+            # 選択された日付より前の日付は除外
+            if current_date < date:
+                continue
         
         if dates:
             st.write('登録する日付を選択:')
