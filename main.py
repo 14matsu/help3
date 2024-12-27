@@ -168,7 +168,7 @@ def initialize_session_state():
     if 'selected_dates' not in st.session_state:
         st.session_state.selected_dates = {}
 
-def update_shift_input(current_shift, employee, date, selected_year, selected_month):
+def update_shift_input(current_shift, employee, date):
     initialize_session_state()
     
     if not st.session_state.editing_shift:
@@ -183,23 +183,23 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
     # 選択可能な日付のリストを作成
     selected_dates = []
     if repeat_weekly:
-        # 表示している期間の開始日と終了日を取得（選択された年月に基づく）
-        period_start = pd.Timestamp(selected_year, selected_month, 16)
-        period_end = (period_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
+        # 当月16日と翌月15日を取得
+        current_month_start = pd.Timestamp(date.year, date.month, 16)
+        next_month_end = (current_month_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
         
         # 選択された日付から1週間ごとの日付を生成し、範囲内のもののみを保持
         dates = []
         current_date = date
         
-        while current_date <= period_end:
-            # 日付が表示期間内（選択された月の16日から翌月15日まで）の場合のみ追加
-            if period_start <= current_date <= period_end:
+        while current_date <= next_month_end:
+            # 現在の日付が当月16日以降かつ翌月15日以前の場合のみ追加
+            if current_month_start <= current_date <= next_month_end:
                 dates.append(current_date)
             current_date += pd.Timedelta(weeks=1)
             
-            # 期間外の日付が出てきたら終了
-            if current_date > period_end:
-                break
+            # 選択された日付より前の日付は除外
+            if current_date < date:
+                continue
         
         if dates:
             st.write('登録する日付を選択:')
