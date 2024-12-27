@@ -167,6 +167,8 @@ def initialize_session_state():
         st.session_state.current_shift = None
     if 'selected_dates' not in st.session_state:
         st.session_state.selected_dates = {}
+    if 'help_selected_dates' not in st.session_state:
+        st.session_state.help_selected_dates = {}
 
 def update_shift_input(current_shift, employee, date, selected_year, selected_month):
     initialize_session_state()
@@ -270,6 +272,72 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
     
     st.session_state.current_shift = new_shift_str
     return new_shift_str, repeat_weekly, selected_dates
+
+def register_store_help(help_date, store, help_time, selected_year, selected_month):
+    # 繰り返し登録チェックボックス
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='同じ曜日のヘルプ希望を一括登録します', key='help_repeat_weekly')
+    
+    selected_dates = []
+    if repeat_weekly:
+        # 表示している期間の開始日と終了日を取得（選択された年月に基づく）
+        period_start = pd.Timestamp(selected_year, selected_month, 16)
+        period_end = (period_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
+        
+        # 選択された日付から1週間ごとの日付を生成し、範囲内のもののみを保持
+        dates = []
+        current_date = help_date
+        
+        while current_date <= period_end:
+            # 日付が表示期間内（選択された月の16日から翌月15日まで）の場合のみ追加
+            if period_start <= current_date <= period_end:
+                dates.append(current_date)
+            current_date += pd.Timedelta(weeks=1)
+            
+            # 期間外の日付が出てきたら終了
+            if current_date > period_end:
+                break
+        
+        if dates:
+            st.write('登録する日付を選択:')
+            
+            # セッション状態の初期化
+            if 'help_selected_dates' not in st.session_state:
+                st.session_state.help_selected_dates = {d.strftime("%Y/%m/%d"): True for d in dates}
+            
+            # 全選択/全解除ボタン
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button('全て選択', key='help_select_all'):
+                    for d in dates:
+                        st.session_state.help_selected_dates[d.strftime("%Y/%m/%d")] = True
+                    st.experimental_rerun()
+            with col2:
+                if st.button('全て解除', key='help_clear_all'):
+                    for d in dates:
+                        st.session_state.help_selected_dates[d.strftime("%Y/%m/%d")] = False
+                    st.experimental_rerun()
+            
+            # 日付選択用のチェックボックスを表示
+            for d in dates:
+                date_str = d.strftime("%Y/%m/%d")
+                st.session_state.help_selected_dates[date_str] = st.checkbox(
+                    f'{date_str} ({WEEKDAY_JA[d.strftime("%a")]})', 
+                    value=st.session_state.help_selected_dates.get(date_str, True),
+                    key=f'help_date_checkbox_{date_str}'
+                )
+                if st.session_state.help_selected_dates[date_str]:
+                    selected_dates.append(d)
+    
+    return repeat_weekly, selected_dates
+
+async def save_store_help_async(help_date, store, help_time, repeat_weekly=False, selected_dates=None):
+    if not repeat_weekly:
+        # 単一日付の登録
+        db.save_store_help_request(help_date, store, help_time)
+    else:
+        # 選択された日付すべてに登録
+        for target_date in selected_dates:
+            db.save_store_help_request(target_date, store, help_time)
 
 def display_store_help_requests(selected_year, selected_month):
     st.header('店舗ヘルプ希望')
@@ -393,8 +461,12 @@ async def main():
         
         help_date = st.date_input('日付を選択', min_value=start_date.date(), max_value=end_date.date(), value=help_default_date, key='help_date')
         help_time = st.text_input('時間帯')
+        
+        # 繰り返し登録のオプションを追加
+        repeat_weekly, selected_dates = register_store_help(pd.Timestamp(help_date), store, help_time, selected_year, selected_month)
+        
         if st.button('ヘルプ希望を登録'):
-            db.save_store_help_request(help_date, store, help_time)
+            await save_store_help_async(help_date, store, help_time, repeat_weekly, selected_dates)
             st.success('ヘルプ希望を登録しました')
             st.experimental_rerun()
 
