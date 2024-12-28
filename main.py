@@ -218,7 +218,7 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
     st.session_state.current_shift = new_shift_str
 
     # 繰り返し登録チェックボックス (移動)
-    repeat_weekly = st.checkbox('繰り返し登録をする', help='同じ曜日のシフトを一括登録します')
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='同一シフトを一括登録します')
     
     # 選択可能な日付のリストを作成
     selected_dates = []
