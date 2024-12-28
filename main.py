@@ -180,7 +180,7 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
     shift_type, times, stores = parse_shift(st.session_state.current_shift)
     
     # 繰り返し登録チェックボックス
-    repeat_weekly = st.checkbox('繰り返し登録をする', help='同じ曜日のシフトを一括登録します')
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='シフトを一括登録します')
     
     # 選択可能な日付のリストを作成
     selected_dates = []
@@ -264,7 +264,7 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
 
 def register_store_help(help_date, store, help_time, selected_year, selected_month):
     # 繰り返し登録チェックボックス
-    repeat_weekly = st.checkbox('繰り返し登録をする', help='同じ曜日のヘルプ希望を一括登録します', key='help_repeat_weekly')
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='ヘルプ希望を一括登録します', key='help_repeat_weekly')
     
     selected_dates = []
     if repeat_weekly:
