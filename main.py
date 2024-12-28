@@ -189,19 +189,8 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
         period_start = pd.Timestamp(selected_year, selected_month, 16)
         period_end = (period_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
         
-        # 選択された日付から1週間ごとの日付を生成し、範囲内のもののみを保持
-        dates = []
-        current_date = date
-        
-        while current_date <= period_end:
-            # 日付が表示期間内（選択された月の16日から翌月15日まで）の場合のみ追加
-            if period_start <= current_date <= period_end:
-                dates.append(current_date)
-            current_date += pd.Timedelta(weeks=1)
-            
-            # 期間外の日付が出てきたら終了
-            if current_date > period_end:
-                break
+        # 期間内のすべての日付を生成
+        dates = pd.date_range(start=period_start, end=period_end).tolist()
         
         if dates:
             st.write('登録する日付を選択:')
