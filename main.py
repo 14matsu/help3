@@ -170,7 +170,7 @@ def initialize_session_state():
     if 'help_selected_dates' not in st.session_state:
         st.session_state.help_selected_dates = {}
 
-def update_shift_input(current_shift, employee, date):
+def update_shift_input(current_shift, employee, date, selected_year, selected_month):
     initialize_session_state()
     
     if not st.session_state.editing_shift:
@@ -179,6 +179,50 @@ def update_shift_input(current_shift, employee, date):
     
     shift_type, times, stores = parse_shift(st.session_state.current_shift)
     
+    # 繰り返し登録チェックボックス
+    repeat_weekly = st.checkbox('繰り返し登録をする', help='同じ曜日のシフトを一括登録します')
+    
+    # 選択可能な日付のリストを作成
+    selected_dates = []
+    if repeat_weekly:
+        # 表示している期間の開始日と終了日を取得（選択された年月に基づく）
+        period_start = pd.Timestamp(selected_year, selected_month, 16)
+        period_end = (period_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
+        
+        # 期間内のすべての日付を生成
+        dates = pd.date_range(start=period_start, end=period_end).tolist()
+        
+        if dates:
+            st.write('登録する日付を選択:')
+            
+            # セッション状態の初期化
+            if 'selected_dates' not in st.session_state:
+                st.session_state.selected_dates = {d.strftime("%Y/%m/%d"): True for d in dates}
+            
+            # 全選択/全解除ボタン
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button('全て選択'):
+                    for d in dates:
+                        st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = True
+                    st.experimental_rerun()
+            with col2:
+                if st.button('全て解除'):
+                    for d in dates:
+                        st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = False
+                    st.experimental_rerun()
+            
+            # 日付選択用のチェックボックスを表示
+            for d in dates:
+                date_str = d.strftime("%Y/%m/%d")
+                st.session_state.selected_dates[date_str] = st.checkbox(
+                    f'{date_str} ({WEEKDAY_JA[d.strftime("%a")]})', 
+                    value=st.session_state.selected_dates.get(date_str, True),
+                    key=f'date_checkbox_{date_str}'
+                )
+                if st.session_state.selected_dates[date_str]:
+                    selected_dates.append(d)
+
     # シフト種類選択
     new_shift_type = st.selectbox('種類', ['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'], 
                                  index=['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'].index(shift_type) 
@@ -214,9 +258,9 @@ def update_shift_input(current_shift, employee, date):
             new_shift_str = new_shift_type
     elif new_shift_type in ['休み', '鹿屋', 'かご北', 'リクルート', '-']:
         new_shift_str = new_shift_type
-        
+    
     st.session_state.current_shift = new_shift_str
-    return new_shift_str
+    return new_shift_str, repeat_weekly, selected_dates
 
 def register_store_help(help_date, store, help_time, selected_year, selected_month):
     # 繰り返し登録チェックボックス
@@ -375,50 +419,7 @@ async def main():
         st.session_state.last_employee = employee
         st.session_state.last_date = date
         
-        new_shift_str = update_shift_input(current_shift, employee, date)
-
-        # 一括登録チェックボックス（保存ボタンの直前に配置）
-        repeat_weekly = st.checkbox('一括登録をする', help='複数の日付に同じシフトを一括登録します')
-    
-        selected_dates = []
-        if repeat_weekly:
-            # 表示している期間の開始日と終了日を取得（選択された年月に基づく）
-            period_start = pd.Timestamp(selected_year, selected_month, 16)
-            period_end = (period_start + pd.DateOffset(months=1)) - pd.Timedelta(days=1)
-            
-            # 期間内のすべての日付を生成
-            dates = pd.date_range(start=period_start, end=period_end).tolist()
-            
-            if dates:
-                st.write('登録する日付を選択:')
-                
-                # セッション状態の初期化
-                if 'selected_dates' not in st.session_state:
-                    st.session_state.selected_dates = {d.strftime("%Y/%m/%d"): True for d in dates}
-                
-                # 全選択/全解除ボタン
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button('全て選択'):
-                        for d in dates:
-                            st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = True
-                        st.experimental_rerun()
-                with col2:
-                    if st.button('全て解除'):
-                        for d in dates:
-                            st.session_state.selected_dates[d.strftime("%Y/%m/%d")] = False
-                        st.experimental_rerun()
-                
-                # 日付選択用のチェックボックスを表示
-                for d in dates:
-                    date_str = d.strftime("%Y/%m/%d")
-                    st.session_state.selected_dates[date_str] = st.checkbox(
-                        f'{date_str} ({WEEKDAY_JA[d.strftime("%a")]})', 
-                        value=st.session_state.selected_dates.get(date_str, True),
-                        key=f'date_checkbox_{date_str}'
-                    )
-                    if st.session_state.selected_dates[date_str]:
-                        selected_dates.append(d)
+        new_shift_str, repeat_weekly, selected_dates = update_shift_input(current_shift, employee, date, selected_year, selected_month)
 
         if st.button('保存'):
             await save_shift_async(date, employee, new_shift_str, repeat_weekly, selected_dates)
