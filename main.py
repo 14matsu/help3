@@ -383,7 +383,7 @@ async def main():
     with st.sidebar:
         st.header('設定')
         current_year = datetime.now().year
-        selected_year = st.selectbox('年を選択', range(current_year, current_year + 10), key='year_selector')
+        selected_year = st.selectbox('年を選択', range(current_year-1, current_year + 10), key='year_selector')
         selected_month = st.selectbox('月を選択', range(1, 13), key='month_selector')
 
         initialize_shift_data(selected_year, selected_month)
