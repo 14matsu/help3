@@ -435,7 +435,7 @@ async def main():
             st.success('保存しました')
             st.experimental_rerun()
 
-        st.header('店舗ヘルプ希望登録')
+        st.header('店舗ヘルプ希望登録/修正')
         area = st.selectbox('エリアを選択', [key for key in AREAS.keys() if key != 'なし'], key='help_area')
         store = st.selectbox('店舗を選択', AREAS[area], key='help_store')
         help_default_date = max(min(datetime.now().date(), end_date.date()), start_date.date())
@@ -495,3 +495,4 @@ if __name__ == '__main__':
         asyncio.run(main())
     else:
         st.error("データベース接続に失敗しました")
+
