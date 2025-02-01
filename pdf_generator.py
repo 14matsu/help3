@@ -217,10 +217,14 @@ def format_shift_for_pdf(shift):
                                                         backColor=colors.HexColor(RECRUIT_BG_COLOR)))
     # その他の処理を追加
     if isinstance(shift, str) and shift.startswith('その他'):
+        other_style = ParagraphStyle('Other', 
+                                    parent=bold_style, 
+                                    textColor=colors.HexColor("#373737"),
+                                    backColor=colors.HexColor(RECRUIT_BG_COLOR))
         if ',' in shift:
             _, content = shift.split(',', 1)
-            return Paragraph(f'<b>その他: {content}</b>', bold_style)
-        return Paragraph('<b>その他</b>', bold_style)
+            return Paragraph(f'<b>その他: {content}</b>', other_style)
+        return Paragraph('<b>その他</b>', other_style)
     
     shift_parts = shift.split(',')
     shift_type = shift_parts[0]
