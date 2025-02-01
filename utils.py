@@ -5,11 +5,19 @@ from constants import AREAS, SHIFT_TYPES, STORE_COLORS, FILLED_HELP_BG_COLOR, SA
 
 #シフト文字列を解析し、シフトタイプ、時間、店舗に分割
 def parse_shift(shift_str):
+    # 特殊なケースの処理
     if pd.isna(shift_str) or shift_str in ['-', '休み', '鹿屋', 'かご北', 'リクルート'] or isinstance(shift_str, (int, float)):
         return shift_str, [], []
+
+    # 「その他」の場合の処理
+    if isinstance(shift_str, str) and shift_str.startswith('その他'):
+        return shift_str, [], []
+
     try:
+        # 通常のシフト処理
         parts = str(shift_str).split(',')
-        shift_type = parts[0] if parts[0] in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート'] else ''
+        shift_type = parts[0] if parts[0] in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート', 'その他'] else ''
+        
         times_stores = []
         for part in parts[1:]:
             if '@' in part:
@@ -17,6 +25,7 @@ def parse_shift(shift_str):
                 times_stores.append((time, store))
             else:
                 times_stores.append((part.strip(), ''))
+        
         times, stores = zip(*times_stores) if times_stores else ([], [])
         return shift_type, list(times), list(stores)
     except:
@@ -35,6 +44,11 @@ def format_shifts(val):
         return f'<div style="background-color: {KAGOKITA_BG_COLOR};">{val}</div>'
     if val == 'リクルート':
         return f'<div style="background-color: {RECRUIT_BG_COLOR};">{val}</div>'
+    if isinstance(val, str) and val.startswith('その他,'):
+        content = val.split(',', 1)[1]
+        return f'<div style="white-space: pre-line">その他\n{content}</div>'
+    if val == 'その他':
+        return val
     
     try:
         parts = str(val).split(',')
