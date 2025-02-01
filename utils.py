@@ -44,11 +44,11 @@ def format_shifts(val):
         return f'<div style="background-color: {KAGOKITA_BG_COLOR};">{val}</div>'
     if val == 'リクルート':
         return f'<div style="background-color: {RECRUIT_BG_COLOR};">{val}</div>'
-    if isinstance(val, str) and val.startswith('その他,'):
-        content = val.split(',', 1)[1]
-        return f'<div style="white-space: pre-line">その他\n{content}</div>'
-    if val == 'その他':
-        return val
+    if isinstance(val, str) and val.startswith('その他'):
+        if ',' in val:
+            _, content = val.split(',', 1)
+            return f'<div style="background-color: {RECRUIT_BG_COLOR};">その他: {content}</div>'
+        return f'<div style="background-color: {RECRUIT_BG_COLOR};">その他</div>'
     
     try:
         parts = str(val).split(',')
