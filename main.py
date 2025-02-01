@@ -55,7 +55,7 @@ def calculate_shift_count(shift_data):
         if pd.isna(shift) or shift == '-':
             return 0
         shift_type = shift.split(',')[0] if ',' in shift else shift
-        if shift_type in ['1日可', '鹿屋', 'かご北', 'リクルート']:
+        if shift_type in ['1日可', '鹿屋', 'かご北', 'リクルート'] or shift_type.startswith('その他'):
             return 1
         elif shift_type in ['AM可', 'PM可']:
             return 0.5
@@ -179,11 +179,11 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
     
     shift_type, times, stores = parse_shift(st.session_state.current_shift)
     
-    # シフト種類選択
-    new_shift_type = st.selectbox('種類', ['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'], 
-                                 index=['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート'].index(shift_type) 
-                                 if shift_type in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート'] else 3)
-    
+# シフト種類選択
+    new_shift_type = st.selectbox('種類', ['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート', 'その他'], 
+                                 index=['AM可', 'PM可', '1日可', '-', '休み', '鹿屋', 'かご北', 'リクルート', 'その他'].index(shift_type) 
+                                 if shift_type in ['AM可', 'PM可', '1日可', '休み', '鹿屋', 'かご北', 'リクルート', 'その他'] else 3)
+        
     if new_shift_type in ['AM可', 'PM可', '1日可']:
         num_shifts = st.number_input('シフト数', min_value=1, max_value=5, value=len(times) or 1)
         
@@ -212,6 +212,12 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
             new_shift_str = f"{new_shift_type},{','.join([f'{t}@{s}' if s else t for t, s in zip(new_times, new_stores)])}"
         else:
             new_shift_str = new_shift_type
+    elif new_shift_type == 'その他':
+        other_content = st.text_input('内容を入力してください')
+        if other_content:
+            new_shift_str = f"その他,{other_content}"
+        else:
+            new_shift_str = 'その他'
     elif new_shift_type in ['休み', '鹿屋', 'かご北', 'リクルート', '-']:
         new_shift_str = new_shift_type
     
