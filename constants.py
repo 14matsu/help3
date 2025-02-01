@@ -66,4 +66,4 @@ KANOYA_BG_COLOR = "#C0FF80"   # 鹿屋用の背景色
 KAGOKITA_BG_COLOR = "#C0FF80" # かご北用の背景色
 RECRUIT_BG_COLOR = "#c2a5ff" # かご北用の背景色
 DARK_GREY_TEXT_COLOR = "#666666"
-SPECIAL_SHIFT_TYPES = ['休み', '鹿屋', 'かご北','リクルート']
+SPECIAL_SHIFT_TYPES = ['休み', '鹿屋', 'かご北','リクルート', 'その他']
