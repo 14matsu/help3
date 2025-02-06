@@ -72,7 +72,7 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み' 
                    else KANOYA_BG_COLOR if shift_type == '鹿屋' 
                    else KAGOKITA_BG_COLOR if shift_type == 'かご北'
-                   else RECRUIT_BG_COLOR if shift_type in ['リクルート', 'その他']
+                   else RECRUIT_BG_COLOR if shift_type == 'リクルート'
                    else None)
         special_style = ParagraphStyle('SpecialShift', parent=bold_style2, textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), backColor=colors.HexColor(bg_color))
         return [Paragraph(f'<b>{shift_type}</b>', special_style)]
