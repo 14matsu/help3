@@ -58,29 +58,26 @@ def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
-def format_shift_for_individual_pdf(shift_str):
+def format_shift_for_individual_pdf(shift_type, times, stores):
     """個人PDF用のシフトフォーマット関数"""
-    if pd.isna(shift_str) or shift_str == '-':
+    # NaN値や空の値の処理
+    if pd.isna(shift_type) or shift_type == '-':
         return [Paragraph('-', bold_style2)]
-
-    # シフトを解析
-    shift_type, times, stores = parse_shift(shift_str)
     
     # 基本シフトタイプの処理
     if shift_type in ['AM', 'PM', '1日']:
         return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
     
     # その他の処理
-    if shift_type == 'その他':
+    if isinstance(shift_type, str) and shift_type.startswith('その他'):
         bg_color = RECRUIT_BG_COLOR
+        display_text = 'その他'
         
         if len(times) > 0:  # 内容がある場合
             if len(stores) > 0:  # 店舗情報もある場合
                 display_text = f'その他: {times[0]}@{stores[0]}'
             else:  # 内容のみの場合
                 display_text = f'その他: {times[0]}'
-        else:  # 内容がない場合
-            display_text = 'その他'
             
         special_style = ParagraphStyle(
             'SpecialShift',
