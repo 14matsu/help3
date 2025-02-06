@@ -79,9 +79,13 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         
         # その他の内容を含む表示テキストの設定
         if isinstance(shift_type, str) and shift_type.startswith('その他'):
-            # その他の内容を取得
-            if times and times[0]:  # times[0]にその他の内容が格納されている
-                display_text = f'その他: {times[0]}'
+            # その他の内容とストア情報を組み合わせる
+            content = times[0] if times else ''
+            store = stores[0] if stores else ''
+            if content and store:
+                display_text = f'その他: {content}@{store}'
+            elif content:
+                display_text = f'その他: {content}'
             else:
                 display_text = 'その他'
         else:
