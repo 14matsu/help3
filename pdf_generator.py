@@ -66,47 +66,54 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         shift_type (str): シフトの種類 (AM可, PM可, 1日可, 休み など)
         times (list): 時間のリスト
         stores (list): 店舗のリスト
-    
+        
     Returns:
         list: Paragraphオブジェクトのリスト
     """
-    # 基本的なシフトタイプの処理
+    # シフトが空の場合の処理
     if shift_type in ['-', 'AM', 'PM', '1日']:
         return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
-        
-    # 特別なシフトタイプの処理（休み、鹿屋、かご北など）
-    elif shift_type in SPECIAL_SHIFT_TYPES:
-        # 各特別シフトタイプに対応する背景色を設定
-        bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み' 
-                   else KANOYA_BG_COLOR if shift_type == '鹿屋' 
+    
+    # 特殊なシフトタイプの処理
+    if shift_type in ['休み', '鹿屋', 'かご北', 'リクルート']:
+        bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み'
+                   else KANOYA_BG_COLOR if shift_type == '鹿屋'
                    else KAGOKITA_BG_COLOR if shift_type == 'かご北'
-                   else RECRUIT_BG_COLOR if shift_type in ['リクルート', 'その他']
-                   else None)
-        special_style = ParagraphStyle('SpecialShift', 
-                                     parent=bold_style2, 
-                                     textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), 
-                                     backColor=colors.HexColor(bg_color))
-
-        # その他の場合の特別処理
-        if shift_type == 'その他' and times:
+                   else RECRUIT_BG_COLOR)
+        return [Paragraph(f'<b>{shift_type}</b>', 
+                ParagraphStyle('SpecialShift',
+                             parent=bold_style2,
+                             textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
+                             backColor=colors.HexColor(bg_color)))]
+    
+    # その他の処理
+    if isinstance(shift_type, str) and shift_type.startswith('その他'):
+        other_style = ParagraphStyle('Other',
+                                   parent=bold_style2,
+                                   textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
+                                   backColor=colors.HexColor(RECRUIT_BG_COLOR))
+        # 時間と店舗の情報がある場合
+        if times and stores:
+            content = f"{times[0]}@{stores[0]}" if len(times) > 0 and len(stores) > 0 else ""
+            return [Paragraph(f'<b>その他: {content}</b>', other_style)]
+        # その他の説明のみの場合
+        elif times:
             content = times[0]
-            if '@' in content:
-                # 時間と店舗が含まれている場合（例：ミラクリッド作成/16-18@ジャック）
-                desc, time_store = content.split('/', 1)
-                time, store = time_store.split('@')
-                return [Paragraph(f'<b>その他: {desc}<br/>{time}@{store}</b>', special_style)]
-            else:
-                # 単純な内容の場合（例：研修）
-                return [Paragraph(f'<b>その他: {content}</b>', special_style)]
+            return [Paragraph(f'<b>その他: {content}</b>', other_style)]
         else:
-            return [Paragraph(f'<b>{shift_type}</b>', special_style)]
-            
-    # 通常のシフト（時間と店舗がある場合）の処理
+            return [Paragraph('<b>その他</b>', other_style)]
+    
+    # 通常のシフト（時間と店舗の組み合わせ）の処理
     if times and stores:
-        return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', 
-                bold_style2) 
-                for time, store in zip(times, stores) if time and store]
-                
+        formatted_shifts = []
+        for time, store in zip(times, stores):
+            if time and store:
+                formatted_shifts.append(
+                    Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>',
+                            bold_style2)
+                )
+        return formatted_shifts if formatted_shifts else [Paragraph('-', bold_style2)]
+    
     return [Paragraph('-', bold_style2)]
 
 def generate_help_table_pdf(data, year, month, area=None):
