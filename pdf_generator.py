@@ -58,84 +58,20 @@ def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
-def format_shift_for_individual_pdf(shift_str):
-    """個人PDF用のシフトフォーマット関数"""
-    # NaN値や空の値の処理
-    if pd.isna(shift_str) or shift_str == '-':
-        return [Paragraph('-', bold_style2)]
-    
-    # 休み、鹿屋、かご北の処理
-    if shift_str in ['休み', '鹿屋', 'かご北']:
-        bg_color = (HOLIDAY_BG_COLOR if shift_str == '休み'
-                   else KANOYA_BG_COLOR if shift_str == '鹿屋'
-                   else KAGOKITA_BG_COLOR if shift_str == 'かご北'
+def format_shift_for_individual_pdf(shift_type, times, stores):
+    if shift_type in ['-', 'AM', 'PM', '1日']:
+        return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
+    elif shift_type in SPECIAL_SHIFT_TYPES:
+        # 各特別シフトタイプに対応する背景色を設定
+        bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み' 
+                   else KANOYA_BG_COLOR if shift_type == '鹿屋' 
+                   else KAGOKITA_BG_COLOR if shift_type == 'かご北'
+                   else RECRUIT_BG_COLOR if shift_type in ['リクルート', 'その他']
                    else None)
-        special_style = ParagraphStyle(
-            'SpecialShift',
-            parent=bold_style2,
-            textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
-            backColor=colors.HexColor(bg_color)
-        )
-        return [Paragraph(f'<b>{shift_str}</b>', special_style)]
-    
-    # その他の処理
-    if isinstance(shift_str, str) and shift_str.startswith('その他'):
-        bg_color = RECRUIT_BG_COLOR
-        special_style = ParagraphStyle(
-            'SpecialShift',
-            parent=bold_style2,
-            textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
-            backColor=colors.HexColor(bg_color)
-        )
-        
-        try:
-            # カンマで区切られた内容を解析
-            if ',' in shift_str:
-                _, content = shift_str.split(',', 1)
-                content = content.strip()
-                
-                if '@' in content:  # 店舗情報がある場合
-                    time_store = content.split('@')
-                    display_text = f'その他: {time_store[0].strip()}@{time_store[1].strip()}'
-                else:  # 内容のみの場合
-                    display_text = f'その他: {content}'
-            else:
-                display_text = 'その他'
-                
-            # 改行を含む場合は適切に処理
-            if '\n' in display_text:
-                display_text = display_text.replace('\n', '<br/>')
-                
-            return [Paragraph(f'<b>{display_text}</b>', special_style)]
-        except Exception as e:
-            print(f"Error processing shift string: {shift_str}. Error: {e}")
-            return [Paragraph('<b>その他</b>', special_style)]
-    
-    # 通常のシフト（時間と店舗の情報を含む）の処理
-    try:
-        shift_parts = str(shift_str).split(',')
-        shift_type = shift_parts[0]
-        formatted_shifts = []
-        
-        if shift_type in ['AM', 'PM', '1日']:
-            return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
-        
-        for part in shift_parts[1:]:
-            if '@' in part:
-                time, store = part.strip().split('@')
-                store_color = STORE_COLORS.get(store, "#000000")
-                formatted_shifts.append(
-                    Paragraph(f'<font color="{store_color}"><b>{time}@{store}</b></font>', bold_style2)
-                )
-            else:
-                formatted_shifts.append(
-                    Paragraph(f'<b>{part.strip()}</b>', bold_style2)
-                )
-        
-        return formatted_shifts if formatted_shifts else [Paragraph('-', bold_style2)]
-    except Exception as e:
-        print(f"Error processing shift: {shift_str}. Error: {e}")
-        return [Paragraph('-', bold_style2)]
+        special_style = ParagraphStyle('SpecialShift', parent=bold_style2, textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), backColor=colors.HexColor(bg_color))
+        return [Paragraph(f'<b>{shift_type}</b>', special_style)]
+    return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', bold_style2) 
+            for time, store in zip(times, stores) if time and store]
 
 def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
