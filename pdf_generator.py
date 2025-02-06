@@ -61,6 +61,12 @@ def hex_to_rgb(hex_color):
 def format_shift_for_individual_pdf(shift_type, times, stores):
     if shift_type in ['-', 'AM', 'PM', '1日']:
         return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
+    elif shift_type.startswith('その他'):
+        # その他の場合、内容も表示する
+        content = shift_type.split(',')[1] if ',' in shift_type else ''
+        display_text = f'その他: {content}' if content else 'その他'
+        special_style = ParagraphStyle('SpecialShift', parent=bold_style2, textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), backColor=colors.HexColor(RECRUIT_BG_COLOR))
+        return [Paragraph(f'<b>{display_text}</b>', special_style)]
     elif shift_type in SPECIAL_SHIFT_TYPES:
         # 各特別シフトタイプに対応する背景色を設定
         bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み' 
@@ -70,8 +76,6 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
                    else None)
         special_style = ParagraphStyle('SpecialShift', parent=bold_style2, textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), backColor=colors.HexColor(bg_color))
         return [Paragraph(f'<b>{shift_type}</b>', special_style)]
-    return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', bold_style2) 
-            for time, store in zip(times, stores) if time and store]
 
 def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
