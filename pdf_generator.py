@@ -59,8 +59,22 @@ def hex_to_rgb(hex_color):
     return tuple(int(hex_color[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
 def format_shift_for_individual_pdf(shift_type, times, stores):
+    """
+    シフトを個人PDF用にフォーマットする関数
+    
+    Args:
+        shift_type (str): シフトの種類 (AM可, PM可, 1日可, 休み など)
+        times (list): 時間のリスト
+        stores (list): 店舗のリスト
+    
+    Returns:
+        list: Paragraphオブジェクトのリスト
+    """
+    # 基本的なシフトタイプの処理
     if shift_type in ['-', 'AM', 'PM', '1日']:
         return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
+        
+    # 特別なシフトタイプの処理（休み、鹿屋、かご北など）
     elif shift_type in SPECIAL_SHIFT_TYPES:
         # 各特別シフトタイプに対応する背景色を設定
         bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み' 
@@ -68,10 +82,25 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
                    else KAGOKITA_BG_COLOR if shift_type == 'かご北'
                    else RECRUIT_BG_COLOR if shift_type in ['リクルート', 'その他']
                    else None)
-        special_style = ParagraphStyle('SpecialShift', parent=bold_style2, textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), backColor=colors.HexColor(bg_color))
-        return [Paragraph(f'<b>{shift_type}</b>', special_style)]
-    return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', bold_style2) 
-            for time, store in zip(times, stores) if time and store]
+        special_style = ParagraphStyle('SpecialShift', 
+                                     parent=bold_style2, 
+                                     textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), 
+                                     backColor=colors.HexColor(bg_color))
+                                     
+        # その他の場合、内容も表示する
+        if shift_type == 'その他' and times:
+            content = times[0]  # その他の内容は times の最初の要素に格納されている
+            return [Paragraph(f'<b>その他: {content}</b>', special_style)]
+        else:
+            return [Paragraph(f'<b>{shift_type}</b>', special_style)]
+            
+    # 通常のシフト（時間と店舗がある場合）の処理
+    if times and stores:
+        return [Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>', 
+                bold_style2) 
+                for time, store in zip(times, stores) if time and store]
+                
+    return [Paragraph('-', bold_style2)]
 
 def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
