@@ -296,7 +296,6 @@ def generate_individual_pdf(data, employee, year, month):
     end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
     filtered_data = data[(data.index >= start_date) & (data.index <= end_date)]
 
-    # 最大シフト数を計算（複数シフトに対応）
     max_shifts = max(len(str(shift).split(',')) - 1 if pd.notna(shift) and ',' in str(shift) else 1 
                     for shift in filtered_data if pd.notna(shift))
     
@@ -307,22 +306,29 @@ def generate_individual_pdf(data, employee, year, month):
     for date, shift in filtered_data.items():
         weekday = WEEKDAY_JA[date.strftime('%a')]
         
-        # parse_shift関数を使用してシフトを解析
+        # シフトデータの処理
         if pd.notna(shift) and shift != '-':
-            shift_type, times, stores = parse_shift(str(shift))
+            shift_str = str(shift)
+            shift_type, times, stores = parse_shift(shift_str)
             
             # その他の場合の特別処理
             if shift_type == 'その他':
-                if times:  # その他の内容がある場合
-                    formatted_shifts = format_shift_for_individual_pdf('その他', times, stores)
+                if '/' in shift_str and '@' in shift_str:
+                    # その他,ミラクリッド作成/16-18@ジャック のような形式の場合
+                    content = shift_str.split(',', 1)[1]  # ミラクリッド作成/16-18@ジャック の部分を取得
+                    formatted_shifts = [Paragraph(f'<b>その他: {content}</b>', 
+                                     ParagraphStyle('Other',
+                                                  parent=bold_style2,
+                                                  textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
+                                                  backColor=colors.HexColor(RECRUIT_BG_COLOR)))]
                 else:
-                    formatted_shifts = format_shift_for_individual_pdf('その他', [], [])
+                    # その他,研修 のような形式の場合
+                    formatted_shifts = format_shift_for_individual_pdf(shift_type, times, stores)
             else:
                 formatted_shifts = format_shift_for_individual_pdf(shift_type, times, stores)
         else:
             formatted_shifts = format_shift_for_individual_pdf('-', [], [])
         
-        # 必要に応じて空のセルで埋める
         row = [date.strftime('%m/%d'), weekday] + formatted_shifts + [''] * (max_shifts - len(formatted_shifts))
         table_data.append(row)
 
@@ -341,7 +347,6 @@ def generate_individual_pdf(data, employee, year, month):
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
     ])
 
-    # 土日祝日の背景色設定
     for i, row in enumerate(table_data[1:], start=1):
         date = pd.to_datetime(filtered_data.index[i-1])
         if '日' in row[1] or jpholiday.is_holiday(date):
