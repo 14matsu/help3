@@ -66,7 +66,7 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         shift_type (str): シフトの種類 (AM可, PM可, 1日可, 休み など)
         times (list): 時間のリスト
         stores (list): 店舗のリスト
-        
+    
     Returns:
         list: Paragraphオブジェクトのリスト
     """
@@ -87,21 +87,15 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
                              backColor=colors.HexColor(bg_color)))]
     
     # その他の処理
-    if isinstance(shift_type, str) and shift_type.startswith('その他'):
+    if shift_type == 'その他':
         other_style = ParagraphStyle('Other',
                                    parent=bold_style2,
                                    textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
                                    backColor=colors.HexColor(RECRUIT_BG_COLOR))
-        # 時間と店舗の情報がある場合
-        if times and stores:
-            content = f"{times[0]}@{stores[0]}" if len(times) > 0 and len(stores) > 0 else ""
+        if times:
+            content = times[0]  # 研修やミラクリッド作成などの内容
             return [Paragraph(f'<b>その他: {content}</b>', other_style)]
-        # その他の説明のみの場合
-        elif times:
-            content = times[0]
-            return [Paragraph(f'<b>その他: {content}</b>', other_style)]
-        else:
-            return [Paragraph('<b>その他</b>', other_style)]
+        return [Paragraph('<b>その他</b>', other_style)]
     
     # 通常のシフト（時間と店舗の組み合わせ）の処理
     if times and stores:
@@ -302,7 +296,9 @@ def generate_individual_pdf(data, employee, year, month):
     end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
     filtered_data = data[(data.index >= start_date) & (data.index <= end_date)]
 
-    max_shifts = max(len(str(shift).split(',')) - 1 for shift in filtered_data if not pd.isna(shift))
+    # 最大シフト数を計算（複数シフトに対応）
+    max_shifts = max(len(str(shift).split(',')) - 1 if pd.notna(shift) and ',' in str(shift) else 1 
+                    for shift in filtered_data if pd.notna(shift))
     
     col_widths = [20*mm, 15*mm] + [30*mm] * max_shifts
     
@@ -310,11 +306,23 @@ def generate_individual_pdf(data, employee, year, month):
     
     for date, shift in filtered_data.items():
         weekday = WEEKDAY_JA[date.strftime('%a')]
-        shift_parts = str(shift).split(',') if pd.notna(shift) else ['-']
-        shift_type = shift_parts[0]
-        times_stores = [part.strip().split('@') for part in shift_parts[1:] if '@' in part]
-        times, stores = zip(*times_stores) if times_stores else ([], [])
-        formatted_shifts = format_shift_for_individual_pdf(shift_type, times, stores)
+        
+        # parse_shift関数を使用してシフトを解析
+        if pd.notna(shift) and shift != '-':
+            shift_type, times, stores = parse_shift(str(shift))
+            
+            # その他の場合の特別処理
+            if shift_type == 'その他':
+                if times:  # その他の内容がある場合
+                    formatted_shifts = format_shift_for_individual_pdf('その他', times, stores)
+                else:
+                    formatted_shifts = format_shift_for_individual_pdf('その他', [], [])
+            else:
+                formatted_shifts = format_shift_for_individual_pdf(shift_type, times, stores)
+        else:
+            formatted_shifts = format_shift_for_individual_pdf('-', [], [])
+        
+        # 必要に応じて空のセルで埋める
         row = [date.strftime('%m/%d'), weekday] + formatted_shifts + [''] * (max_shifts - len(formatted_shifts))
         table_data.append(row)
 
@@ -333,23 +341,13 @@ def generate_individual_pdf(data, employee, year, month):
         ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
     ])
 
+    # 土日祝日の背景色設定
     for i, row in enumerate(table_data[1:], start=1):
         date = pd.to_datetime(filtered_data.index[i-1])
         if '日' in row[1] or jpholiday.is_holiday(date):
             style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(HOLIDAY_BG_COLOR))
         elif '土' in row[1]:
             style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor(SATURDAY_BG_COLOR))
-
-        for j, cell in enumerate(row[2:], start=2):
-            if isinstance(cell, list) and len(cell) > 0 and isinstance(cell[0], Paragraph):
-                if '休み' in cell[0].text:
-                    style.add('BACKGROUND', (j, i), (j, i), colors.HexColor(HOLIDAY_BG_COLOR))
-                elif '鹿屋' in cell[0].text:
-                    style.add('BACKGROUND', (j, i), (j, i), colors.HexColor(KANOYA_BG_COLOR))
-                elif 'かご北' in cell[0].text:
-                    style.add('BACKGROUND', (j, i), (j, i), colors.HexColor(KAGOKITA_BG_COLOR))
-                elif 'リクルート' in cell[0].text:
-                    style.add('BACKGROUND', (j, i), (j, i), colors.HexColor(RECRUIT_BG_COLOR))
 
     t.setStyle(style)
     elements.append(t)
