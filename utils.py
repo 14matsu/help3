@@ -12,16 +12,22 @@ def parse_shift(shift_str):
 
     # 「その他」の場合の処理
     if isinstance(shift_str, str) and shift_str.startswith('その他'):
-        parts = shift_str.split(',', 1)
-        if len(parts) > 1:
-            content = parts[1]
-            if '@' in content:
-                # 時間と店舗が含まれている場合（例：その他,ミラクリッド作成/16-18@ジャック）
-                time_store = content.split('@')
-                return 'その他', [time_store[0]], [time_store[1]]
-            else:
-                # 内容のみの場合（例：その他,研修）
-                return 'その他', [content], []
+        # コロンで区切られた内容がある場合（例：その他:研修）
+        if ':' in shift_str:
+            _, content = shift_str.split(':', 1)
+            return 'その他', [content.strip()], []
+        # カンマで区切られた内容がある場合
+        elif ',' in shift_str:
+            parts = shift_str.split(',', 1)
+            if len(parts) > 1:
+                content = parts[1]
+                if '@' in content:
+                    # 時間と店舗が含まれている場合（例：その他,ミラクリッド作成/16-18@ジャック）
+                    time_store = content.split('@')
+                    return 'その他', [time_store[0]], [time_store[1]]
+                else:
+                    # 内容のみの場合（例：その他,研修）
+                    return 'その他', [content.strip()], []
         return 'その他', [], []
 
     try:
