@@ -79,15 +79,17 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         
         # その他の内容を含む表示テキストの設定
         if isinstance(shift_type, str) and shift_type.startswith('その他'):
-            # その他の内容とストア情報を組み合わせる
-            content = times[0] if times else ''
-            store = stores[0] if stores else ''
-            if content and store:
-                display_text = f'その他: {content}@{store}'
-            elif content:
-                display_text = f'その他: {content}'
+            # shift_typeから直接内容を取得
+            parts = shift_type.split(',', 1)
+            if len(parts) > 1:
+                display_text = f'その他: {parts[1]}'
             else:
                 display_text = 'その他'
+            
+            # もしtimesとstoresがある場合（店舗情報がある場合）は追加
+            if times and stores:
+                store = stores[0]
+                display_text = f'{display_text}@{store}'
         else:
             display_text = shift_type
         
