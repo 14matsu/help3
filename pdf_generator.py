@@ -86,11 +86,18 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
                                      parent=bold_style2, 
                                      textColor=colors.HexColor(DARK_GREY_TEXT_COLOR), 
                                      backColor=colors.HexColor(bg_color))
-                                     
-        # その他の場合、内容も表示する
+
+        # その他の場合の特別処理
         if shift_type == 'その他' and times:
-            content = times[0]  # その他の内容は times の最初の要素に格納されている
-            return [Paragraph(f'<b>その他: {content}</b>', special_style)]
+            content = times[0]
+            if '@' in content:
+                # 時間と店舗が含まれている場合（例：ミラクリッド作成/16-18@ジャック）
+                desc, time_store = content.split('/', 1)
+                time, store = time_store.split('@')
+                return [Paragraph(f'<b>その他: {desc}<br/>{time}@{store}</b>', special_style)]
+            else:
+                # 単純な内容の場合（例：研修）
+                return [Paragraph(f'<b>その他: {content}</b>', special_style)]
         else:
             return [Paragraph(f'<b>{shift_type}</b>', special_style)]
             
