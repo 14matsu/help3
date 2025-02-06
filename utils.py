@@ -5,13 +5,24 @@ from constants import AREAS, SHIFT_TYPES, STORE_COLORS, FILLED_HELP_BG_COLOR, SA
 
 #シフト文字列を解析し、シフトタイプ、時間、店舗に分割
 def parse_shift(shift_str):
+    """シフト文字列を解析し、シフトタイプ、時間、店舗に分割"""
     # 特殊なケースの処理
     if pd.isna(shift_str) or shift_str in ['-', '休み', '鹿屋', 'かご北', 'リクルート'] or isinstance(shift_str, (int, float)):
         return shift_str, [], []
 
     # 「その他」の場合の処理
     if isinstance(shift_str, str) and shift_str.startswith('その他'):
-        return shift_str, [], []
+        parts = shift_str.split(',', 1)
+        if len(parts) > 1:
+            content = parts[1]
+            if '@' in content:
+                # 時間と店舗が含まれている場合（例：その他,ミラクリッド作成/16-18@ジャック）
+                time_store = content.split('@')
+                return 'その他', [time_store[0]], [time_store[1]]
+            else:
+                # 内容のみの場合（例：その他,研修）
+                return 'その他', [content], []
+        return 'その他', [], []
 
     try:
         # 通常のシフト処理
