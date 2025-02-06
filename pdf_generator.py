@@ -79,9 +79,11 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         
         # その他の内容を含む表示テキストの設定
         if isinstance(shift_type, str) and shift_type.startswith('その他'):
-            parts = shift_type.split(',', 1)
-            content = parts[1] if len(parts) > 1 else ''
-            display_text = f'その他: {content}' if content else 'その他'
+            # その他の内容を取得
+            if times and times[0]:  # times[0]にその他の内容が格納されている
+                display_text = f'その他: {times[0]}'
+            else:
+                display_text = 'その他'
         else:
             display_text = shift_type
         
@@ -105,6 +107,7 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
     
     # デフォルトケース
     return [Paragraph(str(shift_type), bold_style2)]
+
 def generate_help_table_pdf(data, year, month, area=None):
     buffer = io.BytesIO()
     # ページサイズを少し大きくする
