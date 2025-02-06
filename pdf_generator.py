@@ -77,7 +77,11 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
             if len(stores) > 0:  # 店舗情報もある場合
                 display_text = f'その他: {times[0]}@{stores[0]}'
             else:  # 内容のみの場合
-                display_text = f'その他: {times[0]}'
+                if ',' in shift_type:  # その他の後にカンマと内容がある場合
+                    _, content = shift_type.split(',', 1)
+                    display_text = f'その他: {content}'
+                else:
+                    display_text = f'その他: {times[0]}'
             
         special_style = ParagraphStyle(
             'SpecialShift',
