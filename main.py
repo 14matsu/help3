@@ -214,13 +214,21 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
             new_shift_str = new_shift_type
             
     elif new_shift_type == 'その他':
-        other_content = st.text_input('内容を入力してください')
+        # その他の内容を取得
+        if shift_type == 'その他' and times and not times[0].endswith('@'):
+            default_content = times[0]
+            shift_times = times[1:] if len(times) > 1 else []
+        else:
+            default_content = ''
+            shift_times = times
+            
+        other_content = st.text_input('内容を入力してください', value=default_content)
         
         # その他の場合も時間と店舗を登録できるようにする
-        has_shift = st.checkbox('時間と店舗を登録する', value=bool(times and stores))
+        has_shift = st.checkbox('時間と店舗を登録する', value=bool(stores))
         
         if has_shift:
-            num_shifts = st.number_input('シフト数', min_value=1, max_value=5, value=len(times) or 1)
+            num_shifts = st.number_input('シフト数', min_value=1, max_value=5, value=len(stores) or 1)
             
             new_times = []
             new_stores = []
@@ -237,13 +245,14 @@ def update_shift_input(current_shift, employee, date, selected_year, selected_mo
                     store = st.selectbox(f'店舗 {i+1}', store_options, index=store_options.index(current_store), key=f'other_shift_store_{i}')
                 
                 with col3:
-                    time = st.text_input(f'時間 {i+1}', value=times[i] if i < len(times) else '', key=f'other_time_{i}')
+                    time = st.text_input(f'時間 {i+1}', value=shift_times[i] if i < len(shift_times) else '', key=f'other_time_{i}')
                 
                 if time:
                     new_times.append(time)
                     new_stores.append(store)
             
             if other_content and new_times:
+                # その他の内容と時間/店舗情報を別々に保持
                 new_shift_str = f"その他,{other_content},{','.join([f'{t}@{s}' if s else t for t, s in zip(new_times, new_stores)])}"
             elif other_content:
                 new_shift_str = f"その他,{other_content}"

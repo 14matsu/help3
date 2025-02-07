@@ -20,7 +20,10 @@ def parse_shift(shift_str):
         else:  # 内容と時間/店舗情報がある場合
             times = []
             stores = []
-            for part in parts[2:]:  # 3番目以降の要素を処理
+            # その他の内容は別途保持
+            other_content = parts[1]
+            # 3番目以降の要素を時間と店舗として処理
+            for part in parts[2:]:
                 if '@' in part:
                     time, store = part.strip().split('@')
                     times.append(time)
@@ -28,7 +31,8 @@ def parse_shift(shift_str):
                 else:
                     times.append(part.strip())
                     stores.append('')
-            return 'その他', [parts[1]] + times, stores
+            # その他の内容を最初の要素として返す
+            return 'その他', [other_content] + times, stores
 
     try:
         # 通常のシフト処理
