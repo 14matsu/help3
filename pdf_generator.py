@@ -386,67 +386,49 @@ def time_to_minutes(time_str):
         # 時間の解析に失敗した場合は、非常に遅い時間として扱う
         return 24 * 60  # 24:00 = 1440分
 
-def generate_store_pdf(store_data, store_name, year, month):
+def generate_store_pdf(store_data, selected_store, selected_year, selected_month):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=20, bottomMargin=18)
     elements = []
 
-    pdfmetrics.registerFont(TTFont('NotoSansJP', 'NotoSansJP-VariableFont_wght.ttf'))
-    pdfmetrics.registerFont(TTFont('NotoSansJP-Bold', 'NotoSansJP-Bold.ttf'))
-
-    # スタイルの定義
-    styles = getSampleStyleSheet()
-    
-    title_style = ParagraphStyle('Title', 
-                                 parent=styles['Heading1'], 
-                                 fontName='NotoSansJP-Bold', 
-                                 fontSize=16, 
-                                 textColor=colors.HexColor("#373737"))
-
-    normal_style = ParagraphStyle('Normal', 
-                                  parent=styles['Normal'], 
-                                  fontName='NotoSansJP', 
-                                  fontSize=10, 
-                                  alignment=TA_CENTER, 
-                                  textColor=colors.HexColor("#373737"))
-
-    bold_style = ParagraphStyle('Bold', 
-                                parent=normal_style, 
-                                fontSize=9,
-                                fontName='NotoSansJP-Bold')
-
-    header_style = ParagraphStyle('Header', 
-                                  parent=bold_style, 
-                                  fontSize=10,
-                                  textColor=colors.white)
-
-    # タイトル
-    title = Paragraph(f"{year}年{month}月 {store_name}", title_style)
-    elements.append(title)
-    elements.append(Spacer(1, 12))
-
-    # 注意書き
-    #note = Paragraph("*大田さんは1人のときは18時まで\nそれ以外は17時まで", normal_style)
-    #elements.append(note)
-    #elements.append(Spacer(1, 12))
+    # フォント登録とスタイル設定（既存のコード）...
 
     # テーブルデータの準備
     header = ['日にち', '時間', 'ヘルプ担当', '備考']
     data = [[Paragraph(f'<b>{h}</b>', header_style) for h in header]]
-    row_colors = [('BACKGROUND', (0, 0), (-1, 0), colors.grey)]  # ヘッダー行の背景色
+    row_colors = [('BACKGROUND', (0, 0), (-1, 0), colors.grey)]
 
     for i, (date, row) in enumerate(store_data.iterrows(), start=1):
         day_of_week = WEEKDAY_JA.get(date.strftime('%a'), date.strftime('%a'))
         date_str = f"{date.strftime('%m月%d日')} {day_of_week}"
         shifts = []
+
         for emp in EMPLOYEES:
             shift = row.get(emp, '-')
             if shift != '-':
+                # シフトの解析
                 shift_type, shift_times, shift_stores = parse_shift(shift)
-                for time, store in zip(shift_times, shift_stores):
-                    if store == store_name:
-                        shifts.append((time_to_minutes(time), time, emp))
-        
+                
+                # その他の場合の特別処理
+                if shift_type == 'その他':
+                    # その他の内容は無視し、時間と店舗の情報のみを処理
+                    for time, store in zip(shift_times[1:], shift_stores):  # 最初の要素（その他の内容）をスキップ
+                        if store == selected_store:
+                            try:
+                                minutes = time_to_minutes(time)
+                                shifts.append((minutes, time, emp))
+                            except ValueError:
+                                continue
+                else:
+                    # 通常のシフト処理
+                    for time, store in zip(shift_times, shift_stores):
+                        if store == selected_store:
+                            try:
+                                minutes = time_to_minutes(time)
+                                shifts.append((minutes, time, emp))
+                            except ValueError:
+                                continue
+
         # 時間でソート
         shifts.sort(key=lambda x: x[0])
         
@@ -467,7 +449,7 @@ def generate_store_pdf(store_data, store_name, year, month):
         elif day_of_week == '土':
             row_colors.append(('BACKGROUND', (0, i), (-1, i), colors.HexColor(SATURDAY_BG_COLOR)))
 
-    # テーブルの作成
+    # テーブルの作成と設定（既存のコード）...
     table = Table(data, colWidths=[80, 80, 80, 80])
     table.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, -1), 'NotoSansJP', 14),
@@ -481,10 +463,7 @@ def generate_store_pdf(store_data, store_name, year, month):
     ] + row_colors))
 
     elements.append(table)
-
-    # PDFの生成
     doc.build(elements)
-
     buffer.seek(0)
     return buffer
 #streamlit run main.py
