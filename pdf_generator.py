@@ -71,9 +71,9 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
         list: Paragraphオブジェクトのリスト
     """
     # シフトが空の場合の処理
-    if shift_type in ['-', 'AM', 'PM', '1日']:
-        return [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
-    
+    if pd.isna(shift_type) or shift_type == '-' or isinstance(shift_type, (int, float)):
+        return [Paragraph('-', bold_style2)]
+
     # 特殊なシフトタイプの処理
     if shift_type in ['休み', '鹿屋', 'かご北', 'リクルート']:
         bg_color = (HOLIDAY_BG_COLOR if shift_type == '休み'
@@ -92,22 +92,42 @@ def format_shift_for_individual_pdf(shift_type, times, stores):
                                    parent=bold_style2,
                                    textColor=colors.HexColor(DARK_GREY_TEXT_COLOR),
                                    backColor=colors.HexColor(RECRUIT_BG_COLOR))
-        if times:
-            content = times[0]  # 研修やミラクリッド作成などの内容
-            return [Paragraph(f'<b>その他: {content}</b>', other_style)]
-        return [Paragraph('<b>その他</b>', other_style)]
-    
-    # 通常のシフト（時間と店舗の組み合わせ）の処理
-    if times and stores:
+        
         formatted_shifts = []
+        if times:
+            # その他の内容を最初の要素として追加
+            content = times[0]
+            formatted_shifts.append(Paragraph(f'<b>その他: {content}</b>', other_style))
+            
+            # 時間と店舗の情報を処理（2番目以降の要素）
+            for i in range(len(stores)):
+                time = times[i + 1] if i + 1 < len(times) else None
+                store = stores[i]
+                if time and store:
+                    color = STORE_COLORS.get(store, "#000000")
+                    formatted_shifts.append(
+                        Paragraph(f'<font color="{color}"><b>{time}@{store}</b></font>',
+                                bold_style2)
+                    )
+        else:
+            formatted_shifts.append(Paragraph('<b>その他</b>', other_style))
+            
+        return formatted_shifts
+    
+    # 通常のシフト（AM可、PM可、1日可）の処理
+    if shift_type in ['AM可', 'PM可', '1日可']:
+        formatted_shifts = [Paragraph(f'<b>{shift_type}</b>', bold_style2)]
+        
         for time, store in zip(times, stores):
             if time and store:
+                color = STORE_COLORS.get(store, "#000000")
                 formatted_shifts.append(
-                    Paragraph(f'<font color="{STORE_COLORS.get(store, "#000000")}"><b>{time}@{store}</b></font>',
+                    Paragraph(f'<font color="{color}"><b>{time}@{store}</b></font>',
                             bold_style2)
                 )
         return formatted_shifts if formatted_shifts else [Paragraph('-', bold_style2)]
     
+    # 予期しないシフトタイプの場合
     return [Paragraph('-', bold_style2)]
 
 def generate_help_table_pdf(data, year, month, area=None):
