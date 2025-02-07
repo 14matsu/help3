@@ -524,17 +524,39 @@ async def main():
         if st.button('店舗PDFを生成'):
             start_date = pd.Timestamp(selected_year, selected_month, 16)
             end_date = start_date + pd.DateOffset(months=1) - pd.Timedelta(days=1)
+            
+            # シフトデータの取得
             store_data = st.session_state.shift_data.copy()
-            store_help_requests = db.get_store_help_requests(start_date, end_date)
-            store_data[selected_store] = store_help_requests[selected_store]
-            pdf_buffer = generate_store_pdf(store_data, selected_store, selected_year, selected_month)
-            file_name = f'{selected_month}月_{selected_store}.pdf'
-            st.download_button(
-                label=f"{selected_store}のPDFをダウンロード",
-                data=pdf_buffer.getvalue(),
-                file_name=file_name,
-                mime="application/pdf"
-            )
+            
+            try:
+                # ヘルプ希望データの取得とデフォルト値の設定
+                store_help_requests = db.get_store_help_requests(start_date, end_date)
+                if store_help_requests.empty:
+                    # ヘルプ希望データが空の場合、すべての日付で'-'を設定
+                    date_range = pd.date_range(start=start_date, end=end_date)
+                    store_help_requests = pd.DataFrame(index=date_range, columns=[selected_store])
+                    store_help_requests[selected_store] = '-'
+                elif selected_store not in store_help_requests.columns:
+                    # 選択された店舗のデータが存在しない場合、'-'で列を追加
+                    store_help_requests[selected_store] = '-'
+                
+                # シフトデータにヘルプ希望データを追加
+                store_data[selected_store] = store_help_requests[selected_store]
+                
+                # PDFの生成
+                pdf_buffer = generate_store_pdf(store_data, selected_store, selected_year, selected_month)
+                file_name = f'{selected_month}月_{selected_store}.pdf'
+                
+                # ダウンロードボタンの表示
+                st.download_button(
+                    label=f"{selected_store}のPDFをダウンロード",
+                    data=pdf_buffer.getvalue(),
+                    file_name=file_name,
+                    mime="application/pdf"
+                )
+                
+            except Exception as e:
+                st.error(f"PDFの生成中にエラーが発生しました。: {str(e)}")
 
     display_shift_table(selected_year, selected_month)
     display_store_help_requests(selected_year, selected_month)
