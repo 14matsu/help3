@@ -66,10 +66,24 @@ def format_shifts(val):
     if val == 'リクルート':
         return f'<div style="background-color: {RECRUIT_BG_COLOR};">{val}</div>'
     if isinstance(val, str) and val.startswith('その他'):
-        if ',' in val:
-            _, content = val.split(',', 1)
-            return f'<div style="background-color: {RECRUIT_BG_COLOR};">その他: {content}</div>'
-        return f'<div style="background-color: {RECRUIT_BG_COLOR};">その他</div>'
+        parts = val.split(',')
+        if len(parts) > 1:
+            # その他の内容を取得
+            content = parts[1]
+            # 時間と店舗の情報を処理
+            shift_parts = []
+            for part in parts[2:]:
+                if '@' in part:
+                    time, store = part.strip().split('@')
+                    color = STORE_COLORS.get(store, "#000000")
+                    shift_parts.append(f'<span style="color: {color}">{time}@{store}</span>')
+                else:
+                    shift_parts.append(part.strip())
+            
+            # その他の内容と時間/店舗情報を改行で区切って表示
+            shifts_str = chr(10).join(shift_parts) if shift_parts else ''
+            return f'<div style="background-color: {RECRUIT_BG_COLOR}; white-space: pre-line">その他: {content}\n{shifts_str}</div>'
+        return f'<div style="background-color: {RECRUIT_BG_COLOR};">その他: {parts[1]}</div>'
     
     try:
         parts = str(val).split(',')
