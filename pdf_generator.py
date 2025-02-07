@@ -361,16 +361,30 @@ def generate_individual_pdf(data, employee, year, month):
     return buffer
 
 def time_to_minutes(time_str):
-    if '-' in time_str:
-        start_time = time_str.split('-')[0]
-    else:
-        start_time = time_str
-    if '半' in start_time:
-        start_time = start_time.replace('半', ':30')
-    else:
-        start_time += ':00'
-    time_obj = datetime.strptime(start_time, '%H:%M')
-    return time_obj.hour * 60 + time_obj.minute
+    """時間文字列を分単位に変換"""
+    try:
+        if '-' in time_str:
+            start_time = time_str.split('-')[0]
+        else:
+            start_time = time_str
+        
+        if '半' in start_time:
+            start_time = start_time.replace('半', ':30')
+        else:
+            start_time += ':00'
+        
+        try:
+            time_obj = datetime.strptime(start_time, '%H:%M')
+            return time_obj.hour * 60 + time_obj.minute
+        except ValueError:
+            # 数字だけの場合（例：'9'）は、':00'を追加して再試行
+            if start_time.isdigit():
+                time_obj = datetime.strptime(f"{start_time}:00", '%H:%M')
+                return time_obj.hour * 60 + time_obj.minute
+            raise
+    except:
+        # 時間の解析に失敗した場合は、非常に遅い時間として扱う
+        return 24 * 60  # 24:00 = 1440分
 
 def generate_store_pdf(store_data, store_name, year, month):
     buffer = io.BytesIO()
